@@ -8,6 +8,7 @@ const {
 const { authMiddleware, optionalAuth } = require('../middleware/authMiddleware');
 
 router.post('/checkout', optionalAuth, checkout);
+router.get('/my', authMiddleware, getUserOrders);
 router.get('/:id', optionalAuth, getOrderById);
 router.get('/user/:userId', authMiddleware, getUserOrders);
 

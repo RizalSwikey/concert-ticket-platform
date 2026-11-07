@@ -3,10 +3,11 @@ const mongoose = require('mongoose');
 const UserSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    password: { type: String, default: '' },
     role: {
       type: String,
-      enum: ['RECRUITER', 'CUSTOMER', 'ADMIN'],
+      enum: ['CUSTOMER', 'RECRUITER', 'ADMIN'],
       default: 'CUSTOMER'
     },
     mockWalletBalance: { type: Number, default: 50000000 }

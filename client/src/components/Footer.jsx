@@ -9,8 +9,10 @@ export default function Footer() {
           {/* Brand & Attribution */}
           <div className="space-y-2 text-center md:text-left">
             <div className="flex items-center justify-center md:justify-start space-x-2 text-bone font-medium">
-              <Shield className="w-4 h-4 text-iris" />
-              <span className="tracking-tight">Concert Anti Double-Booking Engine</span>
+              <span className="font-sans text-sm font-semibold tracking-tight">RESERVA LIVE</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-iris/15 text-iris border border-iris/30 font-semibold uppercase">
+                OFFICIAL TICKETING
+              </span>
             </div>
             <p className="text-ash text-[11px] font-extralight">
               Developed by{' '}

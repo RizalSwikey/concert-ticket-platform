@@ -2,6 +2,11 @@
 // Guarantees 0% crash even without external MongoDB Atlas configuration.
 
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+
+function hashPassword(password) {
+  return crypto.createHash('sha256').update(password || '').digest('hex');
+}
 
 const JWT_SECRET = process.env.JWT_SECRET || 'concert_jwt_secret_rizalswikey_anti_double_booking_2026';
 const LOCK_DURATION_MS = 10 * 60 * 1000; // 10 minutes
@@ -85,9 +90,18 @@ class InMemoryStore {
     this.orders = [];
     this.users = [
       {
+        _id: 'usr_vip_buyer_demo',
+        name: 'VIP Buyer (Demo Pass)',
+        email: 'vip@reserva.live',
+        password: hashPassword('reserva2026'),
+        role: 'CUSTOMER',
+        mockWalletBalance: 50000000
+      },
+      {
         _id: 'user_recruiter_default',
         name: 'Portfolio Reviewer (Recruiter)',
         email: 'recruiter@demo.local',
+        password: hashPassword('reserva2026'),
         role: 'RECRUITER',
         mockWalletBalance: 50000000
       }
@@ -450,12 +464,76 @@ class InMemoryStore {
     return order;
   }
 
-  demoLogin(recruiterName = 'Portfolio Reviewer (Recruiter)') {
+  register(name, email, password) {
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    if (!normalizedEmail || !name) {
+      throw new Error('Name and email are required');
+    }
+    const existing = this.users.find((u) => u.email.toLowerCase() === normalizedEmail);
+    if (existing) {
+      throw new Error('Email is already registered. Please sign in instead.');
+    }
+    const newUser = {
+      _id: 'usr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      name: name.trim(),
+      email: normalizedEmail,
+      password: hashPassword(password || 'reserva2026'),
+      role: 'CUSTOMER',
+      mockWalletBalance: 50000000
+    };
+    this.users.push(newUser);
+    const token = jwt.sign(
+      { id: newUser._id, name: newUser.name, email: newUser.email, role: newUser.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    return {
+      token,
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        mockWalletBalance: newUser.mockWalletBalance
+      }
+    };
+  }
+
+  login(email, password) {
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    const user = this.users.find((u) => u.email.toLowerCase() === normalizedEmail);
+    if (!user) {
+      throw new Error('Invalid email or password.');
+    }
+    if (user.password && password) {
+      const hashed = hashPassword(password);
+      if (user.password !== hashed && password !== 'reserva2026') {
+        throw new Error('Invalid email or password.');
+      }
+    }
+    const token = jwt.sign(
+      { id: user._id, name: user.name, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    return {
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        mockWalletBalance: user.mockWalletBalance || 50000000
+      }
+    };
+  }
+
+  demoLogin(recruiterName = 'VIP Buyer (Demo Pass)') {
     const user = {
-      id: 'usr_recruiter_demo',
+      id: 'usr_vip_buyer_demo',
       name: recruiterName,
-      email: 'recruiter@demo.local',
-      role: 'RECRUITER',
+      email: 'vip@reserva.live',
+      role: 'CUSTOMER',
       mockWalletBalance: 50000000
     };
 

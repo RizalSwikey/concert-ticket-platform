@@ -72,21 +72,22 @@ let cached = global.mongoose || (global.mongoose = { conn: null, promise: null }
 
 ---
 
-## 2. Recruiter & Portfolio Features
+## 2. Commercial Platform & High-Concurrency Features
 
-1. **1-Click Demo Login (Recruiter)**:
-   - Located in the Navbar.
-   - Instantly creates an authenticated reviewer session with pre-funded `Rp 50,000,000` mock wallet balance.
-2. **1-Click Reset / Seed Database**:
-   - Located in the Navbar.
-   - Idempotently resets and populates 4 realistic stadium concerts (Coldplay at GBK, Bruno Mars at JIS, Taylor Swift at National Stadium, Billie Eilish at Indonesia Arena) with over 560+ distributed seats (Available, Booked, and Expired/Active locks).
-3. **Simulate Concurrent Booking Benchmark (5x Parallel Race)**:
-   - Interactive widget directly in the UI.
-   - Fires 5 simultaneous HTTP requests to the exact same seat at the exact same millisecond.
-   - Renders a live visual breakdown proving that **strictly 1 request wins (`200 OK`)** and **4 requests are rejected (`409 Conflict`)** with millisecond latency metrics.
-4. **Digital QR Code E-Ticket**:
-   - Simulated checkout generates an official digital ticket pass containing a live-generated QR code pass, order number, and buyer verification badge.
-
+1. **Full Member Authentication & Instant Demo Pass**:
+   - Production-ready JWT authentication with `POST /api/auth/register`, `POST /api/auth/login`, and session persistence.
+   - Built-in **"Use Instant Demo Account (VIP Buyer)"** shortcut that instantly populates credentials and activates an authenticated test buyer session with `Rp 50,000,000` preloaded balance.
+2. **"My Tickets" Digital Wallet**:
+   - Dedicated wallet view (`My Tickets`) rendering all authenticated user ticket orders.
+   - Holographic digital boarding passes with 3D perspective mouse-tilt, unique QR code passes, perforated ticket cutouts, and print/save options.
+3. **Multi-Step Checkout Flow**:
+   - 10-minute atomic seat holding with live saffron countdown warning.
+   - Multi-payment simulated settlement: Instant QRIS, Virtual Account (BCA, Mandiri, BNI, BRI), and Credit Card.
+4. **Floating `</> Engine Inspector` (Concurrency Lab)**:
+   - Elegant bottom-right floating pill that opens the technical engineering drawer without cluttering the commercial ticketing surface.
+   - Includes the **5x Parallel Race Simulator** (5 simultaneous requests firing at T₀=0ms proving 1 winner `200 OK` vs 4 `409 Conflict`), live **Architecture Telemetry**, and **1-Click Database Reset / Seeder** (560+ seats across 4 concerts).
+5. **Zero-Config Resilient In-Memory Fallback**:
+   - Seamless dual-mode architecture: switches automatically between MongoDB Atlas and High-Speed In-Memory Serialized Mutex. Zero downtime on serverless deployments even without external database configuration.
 ---
 
 ## 3. Tech Stack

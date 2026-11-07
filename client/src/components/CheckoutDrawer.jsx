@@ -3,8 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { X, Clock, CreditCard, ShieldCheck, AlertCircle } from 'lucide-react';
+import { X, Clock, CreditCard, ShieldCheck, AlertCircle, QrCode, Building2, Check } from 'lucide-react';
 import confetti from 'canvas-confetti';
+
+const PAYMENT_METHODS = [
+  { id: 'MOCK_QRIS', name: 'Instant QRIS', subtext: 'GoPay, OVO, ShopeePay, Dana', icon: QrCode },
+  { id: 'MOCK_VA', name: 'Virtual Account', subtext: 'BCA, Mandiri, BNI, BRI', icon: Building2 },
+  { id: 'MOCK_CC', name: 'Credit / Debit Card', subtext: 'Visa, Mastercard, JCB', icon: CreditCard }
+];
 
 export default function CheckoutDrawer({
   isOpen,
@@ -14,9 +20,10 @@ export default function CheckoutDrawer({
   expiresInSeconds,
   onCheckoutSuccess
 }) {
-  const { user, loginAsRecruiter } = useAuth();
+  const { user, openAuthModal, isAuthenticated } = useAuth();
   const { addToast } = useToast();
   const [timeLeft, setTimeLeft] = useState(expiresInSeconds || 600);
+  const [selectedPayment, setSelectedPayment] = useState('MOCK_QRIS');
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -54,23 +61,27 @@ export default function CheckoutDrawer({
   };
 
   const subtotal = lockedSeats.reduce((sum, s) => sum + s.price, 0);
-  const adminFee = 0; // Waived for portfolio reviewer
+  const adminFee = 0; // Waived in platform promotion
   const grandTotal = subtotal + adminFee;
 
   const handleConfirmPay = async () => {
     if (submitting) return;
+
+    if (!isAuthenticated) {
+      openAuthModal('signin', async () => {
+        // Post sign in resume
+      });
+      return;
+    }
+
     setSubmitting(true);
     setErrorMsg('');
 
     try {
-      if (!user) {
-        await loginAsRecruiter('Portfolio Reviewer (Auto-Login)');
-      }
-
       const res = await api.checkout(
         concert._id,
         lockedSeats.map((s) => s._id),
-        'MOCK_QRIS'
+        selectedPayment
       );
 
       if (res.success && res.order) {
@@ -83,8 +94,8 @@ export default function CheckoutDrawer({
 
         addToast({
           type: 'success',
-          title: 'Payment Confirmed',
-          message: `Order #${res.order.orderNumber} created! Total ${formatIDR(grandTotal)} paid.`
+          title: 'Passes Issued Successfully',
+          message: `Order #${res.order.orderNumber} confirmed! E-Ticket issued with QR code.`
         });
 
         onCheckoutSuccess(res.order);
@@ -146,9 +157,9 @@ export default function CheckoutDrawer({
                 <div className="flex items-center space-x-2.5">
                   <Clock className="w-4 h-4 text-saffron animate-spin" />
                   <div className="text-xs">
-                    <span className="text-bone font-medium">Atomic Lock Active</span>
+                    <span className="text-bone font-medium">Seats Held Exclusively</span>
                     <p className="text-[10px] text-silver font-light">
-                      Seats reserved exclusively for you
+                      Time remaining to complete payment
                     </p>
                   </div>
                 </div>
@@ -189,19 +200,43 @@ export default function CheckoutDrawer({
                 </div>
               </div>
 
-              {/* Payment Method */}
-              <div className="p-4 rounded-2xl bg-void-card/60 border border-void-border space-y-2 mb-6">
-                <span className="text-[11px] font-mono uppercase text-ash tracking-wider">
-                  Payment Method
+              {/* Payment Method Selector */}
+              <div className="space-y-3 mb-6">
+                <span className="text-[11px] font-mono uppercase text-ash tracking-wider block">
+                  Select Payment Method
                 </span>
-                <div className="flex items-center justify-between text-xs font-mono text-bone">
-                  <div className="flex items-center space-x-2">
-                    <CreditCard className="w-4 h-4 text-iris" />
-                    <span>Instant Simulated QRIS</span>
-                  </div>
-                  <span className="text-[10px] text-verdant bg-verdant/10 px-2 py-0.5 rounded-full border border-verdant/30 font-semibold">
-                    Instant Mock
-                  </span>
+                <div className="space-y-2">
+                  {PAYMENT_METHODS.map((pm) => {
+                    const Icon = pm.icon;
+                    const isSelected = selectedPayment === pm.id;
+                    return (
+                      <div
+                        key={pm.id}
+                        onClick={() => setSelectedPayment(pm.id)}
+                        className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-center justify-between text-xs font-mono ${
+                          isSelected
+                            ? 'bg-void-card border-iris shadow-sm text-bone'
+                            : 'bg-void-card/50 border-void-border text-silver hover:border-white/20'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isSelected ? 'bg-iris/20 text-iris' : 'bg-white/5 text-ash'}`}>
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-bone font-medium">{pm.name}</p>
+                            <p className="text-[10px] text-zinc-500 font-light">{pm.subtext}</p>
+                          </div>
+                        </div>
+
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                          isSelected ? 'border-iris bg-iris text-white' : 'border-white/20'
+                        }`}>
+                          {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -221,7 +256,7 @@ export default function CheckoutDrawer({
                   <span>{formatIDR(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-silver">
-                  <span>Admin Fee:</span>
+                  <span>Convenience Fee:</span>
                   <span className="text-verdant">IDR 0 (Waived)</span>
                 </div>
                 <div className="flex justify-between text-sm font-semibold text-bone pt-2 border-t border-white/5">
@@ -240,7 +275,7 @@ export default function CheckoutDrawer({
                 <ShieldCheck className="w-4 h-4" />
                 <span>
                   {submitting
-                    ? 'Processing Atomic Write...'
+                    ? 'Processing Payment...'
                     : timeLeft <= 0
                     ? 'Lock Expired'
                     : `Confirm & Pay ${formatIDR(grandTotal)}`}

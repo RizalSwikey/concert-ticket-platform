@@ -42,13 +42,25 @@ export const api = {
   getGuestId,
 
   // Auth
-  demoLogin: (recruiterName) =>
-    request('/demo-login', {
+  register: (name, email, password) =>
+    request('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password })
+    }),
+
+  login: (email, password) =>
+    request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    }),
+
+  demoLogin: (recruiterName = 'VIP Buyer (Demo Pass)') =>
+    request('/auth/demo-login', {
       method: 'POST',
       body: JSON.stringify({ recruiterName })
     }),
 
-  getMe: () => request('/me'),
+  getMe: () => request('/auth/me'),
 
   // Concerts
   getConcerts: (search = '') =>
@@ -85,6 +97,11 @@ export const api = {
     }),
 
   getOrder: (id) => request(`/orders/${id}`),
+
+  getMyOrders: () => request('/orders/my'),
+
+  // Health / Telemetry
+  getHealth: () => request('/health'),
 
   // Seeder
   seedDatabase: () =>

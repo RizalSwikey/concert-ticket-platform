@@ -27,8 +27,8 @@ export function ToastProvider({ children }) {
     <ToastContext.Provider value={{ addToast, removeToast }}>
       {children}
 
-      {/* Floating Animated Toast Container (Bottom-Right) */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col space-y-3 pointer-events-none max-w-sm sm:max-w-md w-full px-4 sm:px-0">
+      {/* Floating Animated Toast Container (Bottom-Right, above inspector) */}
+      <div className="fixed bottom-20 right-6 z-50 flex flex-col space-y-3 pointer-events-none max-w-sm sm:max-w-md w-full px-4 sm:px-0">
         <AnimatePresence>
           {toasts.map((toast) => {
             const config = {

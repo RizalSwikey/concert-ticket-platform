@@ -7,6 +7,9 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(() => localStorage.getItem('reserva_token'));
   const [loading, setLoading] = useState(true);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState('signin'); // 'signin' | 'signup'
+  const [postAuthAction, setPostAuthAction] = useState(null);
 
   useEffect(() => {
     async function loadUser() {
@@ -28,19 +31,67 @@ export function AuthProvider({ children }) {
     loadUser();
   }, [token]);
 
-  const loginAsRecruiter = async (name = 'Portfolio Reviewer (Recruiter)') => {
+  const signIn = async (email, password) => {
+    const res = await api.login(email, password);
+    if (res.success && res.token) {
+      localStorage.setItem('reserva_token', res.token);
+      setToken(res.token);
+      setUser(res.user);
+      setIsAuthModalOpen(false);
+      if (postAuthAction) {
+        postAuthAction(res.user);
+        setPostAuthAction(null);
+      }
+      return res.user;
+    }
+    throw new Error(res.message || 'Login failed');
+  };
+
+  const signUp = async (name, email, password) => {
+    const res = await api.register(name, email, password);
+    if (res.success && res.token) {
+      localStorage.setItem('reserva_token', res.token);
+      setToken(res.token);
+      setUser(res.user);
+      setIsAuthModalOpen(false);
+      if (postAuthAction) {
+        postAuthAction(res.user);
+        setPostAuthAction(null);
+      }
+      return res.user;
+    }
+    throw new Error(res.message || 'Registration failed');
+  };
+
+  const loginDemo = async (name = 'VIP Buyer (Demo Pass)') => {
     try {
       const res = await api.demoLogin(name);
       if (res.success && res.token) {
         localStorage.setItem('reserva_token', res.token);
         setToken(res.token);
         setUser(res.user);
+        setIsAuthModalOpen(false);
+        if (postAuthAction) {
+          postAuthAction(res.user);
+          setPostAuthAction(null);
+        }
         return res.user;
       }
     } catch (err) {
       console.error('Demo login error:', err);
       throw err;
     }
+  };
+
+  const openAuthModal = (tab = 'signin', onAuthenticated = null) => {
+    setAuthModalTab(tab);
+    if (onAuthenticated) setPostAuthAction(() => onAuthenticated);
+    setIsAuthModalOpen(true);
+  };
+
+  const closeAuthModal = () => {
+    setIsAuthModalOpen(false);
+    setPostAuthAction(null);
   };
 
   const logout = () => {
@@ -56,8 +107,15 @@ export function AuthProvider({ children }) {
         token,
         loading,
         isAuthenticated: Boolean(user),
-        loginAsRecruiter,
-        logout
+        signIn,
+        signUp,
+        loginDemo,
+        logout,
+        isAuthModalOpen,
+        authModalTab,
+        setAuthModalTab,
+        openAuthModal,
+        closeAuthModal
       }}
     >
       {children}
