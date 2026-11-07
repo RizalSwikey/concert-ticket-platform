@@ -37,7 +37,7 @@ export default function Hero({ onExploreClick }) {
   }, []);
 
   return (
-    <section className="relative overflow-hidden pt-12 pb-24 border-b border-void-border">
+    <section className="relative overflow-hidden pt-6 sm:pt-12 pb-16 sm:pb-24 border-b border-void-border">
       {/* Cyber Perspective Grid Background */}
       <div className="absolute inset-0 bg-cyber-grid opacity-30 pointer-events-none [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
 
@@ -64,7 +64,7 @@ export default function Hero({ onExploreClick }) {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-center">
           {/* Left Column: Monolithic Commercial Headline */}
           <motion.div
             initial={{ opacity: 0, y: 25 }}
@@ -81,8 +81,11 @@ export default function Hero({ onExploreClick }) {
               <span className="font-mono text-saffron text-[11px]">2026/2027 Stadium Season</span>
             </div>
 
-            <h1 className="text-5xl sm:text-7xl lg:text-8xl font-normal tracking-tighter text-bone leading-[0.93]">
-              EXPERIENCE LIVE MUSIC <br />
+            <h1
+              style={{ fontSize: 'clamp(2.25rem, 7vw, 6.2rem)' }}
+              className="font-normal tracking-[-0.04em] text-bone leading-[0.98]"
+            >
+              EXPERIENCE LIVE MUSIC <br className="hidden sm:inline" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-bone via-iris to-emerald-400">
                 WITHOUT LIMITS.
               </span>
@@ -144,9 +147,9 @@ export default function Hero({ onExploreClick }) {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.15, ease: 'easeOut' }}
-            className="lg:col-span-5 relative flex items-center justify-center"
+            className="lg:col-span-5 relative flex items-center justify-center w-full"
           >
-            <div className="w-full max-w-md rounded-3xl bg-void-surface/90 border border-void-border p-6 relative overflow-hidden flex flex-col justify-between shadow-ambient-stage backdrop-blur-2xl">
+            <div className="w-full max-w-sm sm:max-w-md mx-auto rounded-3xl bg-void-surface/90 border border-void-border p-5 sm:p-6 relative overflow-hidden flex flex-col justify-between shadow-ambient-stage backdrop-blur-2xl">
               {/* Stage Equalizer Header */}
               <div className="relative pb-4 border-b border-void-border">
                 <div className="flex items-center justify-between mb-2">

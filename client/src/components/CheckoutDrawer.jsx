@@ -61,16 +61,14 @@ export default function CheckoutDrawer({
   };
 
   const subtotal = lockedSeats.reduce((sum, s) => sum + s.price, 0);
-  const adminFee = 0; // Waived in platform promotion
+  const adminFee = 0;
   const grandTotal = subtotal + adminFee;
 
   const handleConfirmPay = async () => {
     if (submitting) return;
 
     if (!isAuthenticated) {
-      openAuthModal('signin', async () => {
-        // Post sign in resume
-      });
+      openAuthModal('signin', async () => {});
       return;
     }
 
@@ -115,47 +113,51 @@ export default function CheckoutDrawer({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end">
+        <div className="fixed inset-0 z-50 flex items-end md:items-stretch justify-center md:justify-end">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-void/75 backdrop-blur-md transition-opacity"
+            className="fixed inset-0 bg-void/80 backdrop-blur-md transition-opacity"
             onClick={onClose}
           />
 
-          {/* Drawer Panel */}
+          {/* Drawer / Mobile Bottom Sheet Panel */}
           <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-            className="relative w-full max-w-md bg-void-surface border-l border-void-border p-6 sm:p-8 rounded-l-3xl backdrop-blur-2xl shadow-2xl flex flex-col justify-between overflow-y-auto z-10"
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 50, opacity: 0 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+            className="relative w-full max-w-md bg-void-surface border-t md:border-t-0 md:border-l border-void-border p-5 sm:p-8 rounded-t-3xl md:rounded-t-none md:rounded-l-3xl backdrop-blur-2xl shadow-2xl flex flex-col justify-between max-h-[88vh] md:max-h-full overflow-y-auto z-10"
           >
             {/* Top Bar: Header & Countdown */}
             <div>
-              <div className="flex items-center justify-between pb-6 border-b border-void-border">
+              {/* Mobile Drag Indicator Bar */}
+              <div className="md:hidden w-12 h-1 rounded-full bg-void-border mx-auto mb-3" />
+
+              <div className="flex items-center justify-between pb-4 sm:pb-6 border-b border-void-border">
                 <div>
                   <span className="text-[10px] font-mono tracking-wider text-iris uppercase font-semibold">
                     RESERVATION CHECKOUT
                   </span>
-                  <h2 className="text-xl font-normal tracking-tight text-bone">
+                  <h2 className="text-lg sm:text-xl font-normal tracking-tight text-bone">
                     Review & Confirm Seats
                   </h2>
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-full hover:bg-zinc-800 text-silver hover:text-bone transition-colors"
+                  className="p-2 rounded-full hover:bg-void-card text-silver hover:text-bone transition-colors"
+                  aria-label="Close checkout drawer"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Saffron Countdown Alert */}
-              <div className="my-6 p-4 rounded-2xl bg-saffron/10 border border-saffron/30 flex items-center justify-between">
+              <div className="my-4 sm:my-6 p-3.5 sm:p-4 rounded-2xl bg-saffron/10 border border-saffron/30 flex items-center justify-between">
                 <div className="flex items-center space-x-2.5">
-                  <Clock className="w-4 h-4 text-saffron animate-spin" />
+                  <Clock className="w-4 h-4 text-saffron animate-spin shrink-0" />
                   <div className="text-xs">
                     <span className="text-bone font-medium">Seats Held Exclusively</span>
                     <p className="text-[10px] text-silver font-light">
@@ -164,7 +166,7 @@ export default function CheckoutDrawer({
                   </div>
                 </div>
                 <span
-                  className={`font-mono text-base font-bold ${
+                  className={`font-mono text-base font-bold shrink-0 ${
                     timeLeft < 60 ? 'text-red-400 animate-pulse' : 'text-saffron'
                   }`}
                 >
@@ -173,21 +175,21 @@ export default function CheckoutDrawer({
               </div>
 
               {/* Concert Info */}
-              <div className="space-y-1 mb-6">
+              <div className="space-y-0.5 mb-5">
                 <h4 className="text-sm font-medium text-bone">{concert.title}</h4>
                 <p className="text-xs text-silver font-light">{concert.venue}</p>
               </div>
 
               {/* Selected Seats Breakdown */}
-              <div className="space-y-3 mb-6">
-                <span className="text-[11px] font-mono uppercase text-ash tracking-wider">
+              <div className="space-y-2.5 mb-5">
+                <span className="text-[11px] font-mono uppercase text-silver tracking-wider">
                   Allocated Seats ({lockedSeats.length})
                 </span>
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
                   {lockedSeats.map((seat) => (
                     <div
                       key={seat._id}
-                      className="flex items-center justify-between p-3 rounded-2xl bg-void-card/60 border border-void-border text-xs font-mono"
+                      className="flex items-center justify-between p-3 rounded-2xl bg-void-card border border-void-border text-xs font-mono"
                     >
                       <div className="flex items-center space-x-2">
                         <span className="w-2 h-2 rounded-full bg-iris" />
@@ -201,8 +203,8 @@ export default function CheckoutDrawer({
               </div>
 
               {/* Payment Method Selector */}
-              <div className="space-y-3 mb-6">
-                <span className="text-[11px] font-mono uppercase text-ash tracking-wider block">
+              <div className="space-y-2.5 mb-5">
+                <span className="text-[11px] font-mono uppercase text-silver tracking-wider block">
                   Select Payment Method
                 </span>
                 <div className="space-y-2">
@@ -213,24 +215,24 @@ export default function CheckoutDrawer({
                       <div
                         key={pm.id}
                         onClick={() => setSelectedPayment(pm.id)}
-                        className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-center justify-between text-xs font-mono ${
+                        className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between text-xs font-mono ${
                           isSelected
                             ? 'bg-void-card border-iris shadow-sm text-bone'
-                            : 'bg-void-card/50 border-void-border text-silver hover:border-white/20'
+                            : 'bg-void-card/60 border-void-border text-silver hover:border-void-border'
                         }`}
                       >
                         <div className="flex items-center space-x-3">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isSelected ? 'bg-iris/20 text-iris' : 'bg-white/5 text-ash'}`}>
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isSelected ? 'bg-iris/20 text-iris' : 'bg-void-surface text-silver'}`}>
                             <Icon className="w-4 h-4" />
                           </div>
                           <div>
                             <p className="text-bone font-medium">{pm.name}</p>
-                            <p className="text-[10px] text-zinc-500 font-light">{pm.subtext}</p>
+                            <p className="text-[10px] text-silver font-light">{pm.subtext}</p>
                           </div>
                         </div>
 
                         <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
-                          isSelected ? 'border-iris bg-iris text-white' : 'border-white/20'
+                          isSelected ? 'border-iris bg-iris text-white' : 'border-void-border'
                         }`}>
                           {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
                         </div>
@@ -242,9 +244,9 @@ export default function CheckoutDrawer({
             </div>
 
             {/* Bottom Total & Primary Action Button */}
-            <div className="pt-6 border-t border-void-border space-y-4">
+            <div className="pt-4 sm:pt-6 border-t border-void-border space-y-3.5">
               {errorMsg && (
-                <div className="p-3 rounded-xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs flex items-center space-x-2">
+                <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-400 text-xs flex items-center space-x-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{errorMsg}</span>
                 </div>
@@ -259,7 +261,7 @@ export default function CheckoutDrawer({
                   <span>Convenience Fee:</span>
                   <span className="text-verdant">IDR 0 (Waived)</span>
                 </div>
-                <div className="flex justify-between text-sm font-semibold text-bone pt-2 border-t border-white/5">
+                <div className="flex justify-between text-sm font-semibold text-bone pt-2 border-t border-void-border">
                   <span>Grand Total:</span>
                   <span className="text-iris font-mono">{formatIDR(grandTotal)}</span>
                 </div>
@@ -270,7 +272,7 @@ export default function CheckoutDrawer({
                 whileTap={{ scale: 0.98 }}
                 onClick={handleConfirmPay}
                 disabled={submitting || timeLeft <= 0 || lockedSeats.length === 0}
-                className="w-full py-4 rounded-full bg-iris hover:bg-iris-hover text-white text-xs font-semibold tracking-wide uppercase shadow-iris-glow hover:shadow-iris transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center space-x-2"
+                className="w-full py-3.5 sm:py-4 rounded-full bg-iris hover:bg-iris-hover text-white text-xs font-semibold tracking-wide uppercase shadow-iris-glow hover:shadow-iris transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center space-x-2"
               >
                 <ShieldCheck className="w-4 h-4" />
                 <span>

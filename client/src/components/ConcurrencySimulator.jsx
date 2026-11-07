@@ -128,9 +128,9 @@ export default function ConcurrencySimulator({
       )}
 
       {/* 5-LANE DRAMATIC RACE TRACK VISUALIZATION */}
-      <div className="p-6 rounded-2xl bg-void-card/80 border border-void-border backdrop-blur-xl space-y-4 relative z-10 mb-6">
-        <div className="flex items-center justify-between text-xs font-mono text-silver pb-2 border-b border-white/5">
-          <span>PARALLEL CONCURRENT THREADS (T₀ = 0.000ms)</span>
+      <div className="p-4 sm:p-6 rounded-2xl bg-void-card/80 border border-void-border backdrop-blur-xl relative z-10 mb-6 overflow-x-auto">
+        <div className="min-w-[520px] space-y-4">
+          <div className="flex items-center justify-between text-xs font-mono text-silver pb-2 border-b border-white/5">
           <span className="flex items-center space-x-1.5 text-bone">
             <Lock className="w-3.5 h-3.5 text-saffron" />
             <span>ATOMIC MUTEX GATE: {currentSeat?.seatNumber || 'VIP-A1'}</span>
@@ -218,6 +218,7 @@ export default function ConcurrencySimulator({
             </div>
           );
         })}
+        </div>
       </div>
 
       {/* Results Matrix & Engineering Proof */}

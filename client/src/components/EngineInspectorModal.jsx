@@ -52,7 +52,7 @@ export default function EngineInspectorModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto">
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -68,7 +68,7 @@ export default function EngineInspectorModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="relative w-full max-w-4xl max-h-[90vh] rounded-3xl bg-void-surface border border-iris/50 shadow-iris-glow p-6 sm:p-8 z-10 flex flex-col justify-between overflow-hidden"
+        className="relative w-full max-w-4xl max-h-[92vh] rounded-3xl bg-void-surface border border-iris/50 shadow-iris-glow p-4 sm:p-8 z-10 flex flex-col justify-between overflow-hidden"
       >
         {/* Top Header */}
         <div className="flex items-center justify-between pb-4 border-b border-void-border">

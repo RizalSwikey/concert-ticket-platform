@@ -6,25 +6,26 @@ export default {
     extend: {
       colors: {
         void: {
-          DEFAULT: '#000000',
-          surface: '#09090b',
-          card: '#111115',
-          border: 'rgba(255, 255, 255, 0.08)'
+          DEFAULT: 'var(--bg-primary)',
+          surface: 'var(--bg-surface)',
+          card: 'var(--bg-card)',
+          elevated: 'var(--bg-elevated)',
+          border: 'var(--border-subtle)'
         },
-        bone: '#ffffff',
-        ash: '#9a9a9a',
-        silver: '#bdbdbd',
+        bone: 'var(--text-primary)',
+        ash: 'var(--text-secondary)',
+        silver: 'var(--text-secondary)',
         iris: {
-          DEFAULT: '#8052ff',
-          hover: '#6f3ff5',
-          glow: 'rgba(128, 82, 255, 0.35)'
+          DEFAULT: 'var(--accent-iris)',
+          hover: 'var(--accent-iris-hover)',
+          glow: 'var(--shadow-iris)'
         },
         saffron: {
-          DEFAULT: '#ffb829',
+          DEFAULT: 'var(--accent-saffron)',
           glow: 'rgba(255, 184, 41, 0.3)'
         },
         verdant: {
-          DEFAULT: '#15846e',
+          DEFAULT: 'var(--accent-verdant)',
           glow: 'rgba(21, 132, 110, 0.3)'
         }
       },
@@ -43,9 +44,9 @@ export default {
         pill: '9999px'
       },
       boxShadow: {
-        'iris-glow': '0 0 25px -3px rgba(128, 82, 255, 0.45)',
+        'iris-glow': 'var(--shadow-iris)',
         'saffron-glow': '0 0 20px -3px rgba(255, 184, 41, 0.4)',
-        'ambient-stage': '0 20px 80px -20px rgba(128, 82, 255, 0.25)'
+        'ambient-stage': 'var(--shadow-ambient)'
       }
     }
   },

@@ -99,7 +99,7 @@ export default function AuthModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -115,7 +115,7 @@ export default function AuthModal() {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
         transition={{ type: 'spring', damping: 25, stiffness: 320 }}
-        className="relative w-full max-w-md rounded-3xl bg-void-surface border border-void-border shadow-2xl p-6 sm:p-8 z-10 space-y-6 overflow-hidden"
+        className="relative w-full max-w-md max-h-[92vh] overflow-y-auto rounded-3xl bg-void-surface border border-void-border shadow-2xl p-5 sm:p-8 z-10 space-y-5 sm:space-y-6"
       >
         {/* Glow Accent */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-1.5 bg-gradient-to-r from-iris via-verdant to-saffron rounded-full" />

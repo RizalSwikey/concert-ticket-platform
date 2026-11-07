@@ -72,7 +72,7 @@ export default function TicketModal({ order, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       {/* Dark Void Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -95,7 +95,7 @@ export default function TicketModal({ order, onClose }) {
           transform: `perspective(1000px) rotateX(${rotate.x}deg) rotateY(${rotate.y}deg)`,
           transition: 'transform 0.15s ease-out'
         }}
-        className="relative w-full max-w-md rounded-3xl bg-void-surface border border-iris/50 shadow-iris-glow p-6 sm:p-8 z-10 space-y-6 overflow-hidden"
+        className="relative w-full max-w-md max-h-[92vh] overflow-y-auto rounded-3xl bg-void-surface border border-iris/50 shadow-iris-glow p-5 sm:p-8 z-10 space-y-5 sm:space-y-6"
       >
         {/* Holographic Shimmer Sheen Layer */}
         <div className="absolute inset-0 bg-gradient-to-tr from-iris/15 via-white/5 to-emerald-400/15 pointer-events-none rounded-3xl" />
@@ -124,7 +124,7 @@ export default function TicketModal({ order, onClose }) {
         {/* Holographic Concert Boarding Pass */}
         <div className="relative rounded-2xl bg-void-card/90 border border-void-border overflow-hidden z-10">
           {/* Top Half: Event Details */}
-          <div className="p-6 space-y-4">
+          <div className="p-4 sm:p-6 space-y-3.5 sm:space-y-4">
             <div>
               <span className="text-xs font-mono text-saffron uppercase tracking-wider font-semibold">
                 {order.concertArtist}

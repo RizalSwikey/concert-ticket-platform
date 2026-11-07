@@ -257,15 +257,16 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-void text-bone flex flex-col selection:bg-iris selection:text-white relative">
-      {/* Commercial Navbar */}
+      {/* Commercial Navbar with Theme Toggle & Mobile Nav */}
       <Navbar
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab)}
         myTicketsCount={myTicketsCount}
+        onOpenInspector={() => setIsInspectorOpen(true)}
       />
 
       {/* Main View Router */}
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8 w-full">
         {activeTab === 'discover' && (
           <div className="space-y-16">
             {/* Commercial Hero */}
@@ -402,7 +403,7 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 40 }}
             aria-label="Reservation Summary Bar"
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-11/12 max-w-2xl bg-void-surface/95 border border-iris/50 rounded-full p-3 sm:px-6 backdrop-blur-2xl shadow-iris-glow flex items-center justify-between"
+            className="fixed bottom-16 md:bottom-6 left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:w-11/12 max-w-2xl z-40 bg-void-surface/95 border border-iris/50 rounded-2xl sm:rounded-full p-3 sm:px-6 backdrop-blur-2xl shadow-iris-glow flex items-center justify-between"
           >
             <div className="flex items-center space-x-3">
               <div className="w-9 h-9 rounded-full bg-iris/20 border border-iris/40 flex items-center justify-center text-iris">
@@ -438,8 +439,8 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* FLOATING DEVELOPER INSPECTOR BUTTON (Bottom-Right) */}
-      <div className="fixed bottom-6 right-6 z-30">
+      {/* FLOATING DEVELOPER INSPECTOR BUTTON (Desktop Only) */}
+      <div className="hidden md:flex fixed bottom-6 right-6 z-30">
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
