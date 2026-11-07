@@ -2,6 +2,7 @@ const Concert = require('../models/Concert');
 const Seat = require('../models/Seat');
 const Order = require('../models/Order');
 const User = require('../models/User');
+const inMemoryStore = require('../config/inMemoryStore');
 
 const MOCK_CONCERTS = [
   {
@@ -9,7 +10,7 @@ const MOCK_CONCERTS = [
     artist: 'Coldplay',
     venue: 'Gelora Bung Karno Stadium, Jakarta',
     date: new Date('2026-11-20T19:00:00.000Z'),
-    bannerUrl: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=1200&q=80',
+    bannerUrl: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=1600&q=85',
     description: 'Experience Coldplay live in Jakarta with a cosmic stadium stage, LED wristbands, and sustainable kinetic energy floors.',
     tiers: [
       { name: 'VIP', price: 5000000, color: '#8052ff', totalSeats: 40 },
@@ -23,7 +24,7 @@ const MOCK_CONCERTS = [
     artist: 'Bruno Mars',
     venue: 'Jakarta International Stadium (JIS)',
     date: new Date('2026-12-05T20:00:00.000Z'),
-    bannerUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80',
+    bannerUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1600&q=85',
     description: 'Bruno Mars brings unmatched funk, soul, and pop energy to Jakarta with full live brass band and pyrotechnics.',
     tiers: [
       { name: 'VIP', price: 4800000, color: '#8052ff', totalSeats: 40 },
@@ -37,7 +38,7 @@ const MOCK_CONCERTS = [
     artist: 'Taylor Swift',
     venue: 'National Stadium, Jakarta Arena',
     date: new Date('2026-12-18T18:30:00.000Z'),
-    bannerUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1200&q=80',
+    bannerUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1600&q=85',
     description: 'A 3-hour journey through musical eras featuring monumental staging, acoustic surprise songs, and dancers.',
     tiers: [
       { name: 'VIP', price: 6500000, color: '#8052ff', totalSeats: 40 },
@@ -51,7 +52,7 @@ const MOCK_CONCERTS = [
     artist: 'Billie Eilish',
     venue: 'Indonesia Arena, Jakarta',
     date: new Date('2027-01-15T19:30:00.000Z'),
-    bannerUrl: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1200&q=80',
+    bannerUrl: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1600&q=85',
     description: 'An intimate 360-degree arena audio-visual masterpiece featuring Billie Eilish and Finneas.',
     tiers: [
       { name: 'VIP', price: 4200000, color: '#8052ff', totalSeats: 40 },
@@ -70,9 +71,6 @@ function generateSeatsForConcert(concertId, tiers) {
     tierMap[t.name] = t.price;
   });
 
-  // VIP: Rows A, B (20 seats each = 40)
-  // CAT 1: Rows C, D, E (20 seats each = 60)
-  // CAT 2: Rows F, G (20 seats each = 40)
   const layout = [
     { tier: 'VIP', section: 'VIP Front Stage', rows: ['A', 'B'], countPerRow: 20 },
     { tier: 'CAT 1', section: 'CAT 1 Festival Center', rows: ['C', 'D', 'E'], countPerRow: 20 },
@@ -89,11 +87,6 @@ function generateSeatsForConcert(concertId, tiers) {
         seedCounter++;
         const seatNumber = `${block.tier.replace(/\s+/g, '')}-${row}-${num}`;
 
-        // Realistic seed distribution:
-        // ~15% Booked (e.g. seedCounter % 7 === 0)
-        // ~5% Active Lock (e.g. seedCounter % 19 === 0)
-        // ~3% Expired Lock (e.g. seedCounter % 29 === 0)
-        // Remainder Available
         let status = 'AVAILABLE';
         let lockedUntil = null;
         let lockedBy = null;
@@ -105,12 +98,10 @@ function generateSeatsForConcert(concertId, tiers) {
         } else if (seedCounter % 19 === 0) {
           status = 'LOCKED';
           lockedBy = 'concurrent_user_demo';
-          // Active lock for 8 more minutes
           lockedUntil = new Date(now.getTime() + 8 * 60 * 1000);
         } else if (seedCounter % 29 === 0) {
           status = 'LOCKED';
           lockedBy = 'expired_user_demo';
-          // Expired lock 5 minutes ago (tests lazy release!)
           lockedUntil = new Date(now.getTime() - 5 * 60 * 1000);
         }
 
@@ -136,12 +127,27 @@ function generateSeatsForConcert(concertId, tiers) {
 
 async function seedDatabase(req, res, next) {
   try {
-    // Clear existing data
+    if (global.__isFallbackMode) {
+      inMemoryStore.seed();
+      return res.json({
+        success: true,
+        message: 'In-Memory Database reset and seeded with realistic concerts and seat maps.',
+        seededConcerts: inMemoryStore.concerts.length,
+        seededSeats: inMemoryStore.seats.length,
+        concerts: inMemoryStore.concerts.map((c) => ({
+          id: c._id,
+          title: c.title,
+          artist: c.artist,
+          venue: c.venue,
+          totalSeats: 140
+        }))
+      });
+    }
+
     await Seat.deleteMany({});
     await Concert.deleteMany({});
     await Order.deleteMany({});
 
-    // Ensure default recruiter exists
     await User.findOneAndUpdate(
       { email: 'recruiter@demo.local' },
       {
@@ -179,7 +185,20 @@ async function seedDatabase(req, res, next) {
       }))
     });
   } catch (err) {
-    next(err);
+    inMemoryStore.seed();
+    res.json({
+      success: true,
+      message: 'In-Memory fallback reset and seeded with realistic concerts and seat maps.',
+      seededConcerts: inMemoryStore.concerts.length,
+      seededSeats: inMemoryStore.seats.length,
+      concerts: inMemoryStore.concerts.map((c) => ({
+        id: c._id,
+        title: c.title,
+        artist: c.artist,
+        venue: c.venue,
+        totalSeats: 140
+      }))
+    });
   }
 }
 

@@ -19,23 +19,20 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     service: 'Concert Anti-Double Booking Engine',
+    storageMode: global.__isFallbackMode ? 'IN_MEMORY_CONCURRENT_STORE' : 'MONGODB_ATLAS',
     author: 'Rizal Akbar Syah Fauzan Putra (@RizalSwikey)',
     timestamp: new Date().toISOString()
   });
 });
 
-// Ensure MongoDB is connected before handling data requests
+// Initialize storage (MongoDB or resilient In-Memory Fallback)
 app.use(async (req, res, next) => {
   try {
     await connectDB();
-    next();
   } catch (err) {
-    console.error('MongoDB connection error:', err.message);
-    res.status(500).json({
-      success: false,
-      message: 'Database connection failed. Please ensure MongoDB is running or MONGODB_URI is configured.'
-    });
+    global.__isFallbackMode = true;
   }
+  next();
 });
 
 // Routes

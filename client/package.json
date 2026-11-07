@@ -12,6 +12,7 @@
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "concert-ticket-anti-double-booking": "file:..",
+    "framer-motion": "^14.10.1",
     "lucide-react": "^1.16.0",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",

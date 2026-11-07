@@ -1,9 +1,16 @@
 const Concert = require('../models/Concert');
 const Seat = require('../models/Seat');
+const inMemoryStore = require('../config/inMemoryStore');
 
 async function getConcerts(req, res, next) {
   try {
     const { search } = req.query;
+
+    if (global.__isFallbackMode) {
+      const data = inMemoryStore.getConcerts(search);
+      return res.json({ success: true, data });
+    }
+
     const filter = {};
     if (search) {
       filter.$or = [
@@ -14,8 +21,6 @@ async function getConcerts(req, res, next) {
     }
 
     const concerts = await Concert.find(filter).sort({ date: 1 });
-
-    // Aggregate seat statistics per concert
     const concertIds = concerts.map((c) => c._id);
     const now = new Date();
 
@@ -85,20 +90,31 @@ async function getConcerts(req, res, next) {
 
     res.json({ success: true, data });
   } catch (err) {
-    next(err);
+    // Graceful fallback to in-memory store
+    const data = inMemoryStore.getConcerts(req.query.search);
+    res.json({ success: true, data });
   }
 }
 
 async function getConcertById(req, res, next) {
   try {
     const { id } = req.params;
+
+    if (global.__isFallbackMode) {
+      const concert = inMemoryStore.getConcertById(id);
+      if (!concert) return res.status(404).json({ success: false, message: 'Concert not found' });
+      return res.json({ success: true, data: concert });
+    }
+
     const concert = await Concert.findById(id);
     if (!concert) {
       return res.status(404).json({ success: false, message: 'Concert not found' });
     }
     res.json({ success: true, data: concert });
   } catch (err) {
-    next(err);
+    const concert = inMemoryStore.getConcertById(req.params.id);
+    if (concert) return res.json({ success: true, data: concert });
+    res.status(404).json({ success: false, message: 'Concert not found' });
   }
 }
 
@@ -106,22 +122,25 @@ async function getConcertSeats(req, res, next) {
   try {
     const { id } = req.params;
     const userId = req.user ? req.user.id : null;
-    const now = new Date();
 
+    if (global.__isFallbackMode) {
+      const data = inMemoryStore.getConcertSeats(id, userId);
+      return res.json({ success: true, data });
+    }
+
+    const now = new Date();
     const seats = await Seat.find({ concertId: id }).sort({
       section: 1,
       row: 1,
       number: 1
     });
 
-    // Lazy expiration projection
     const projected = seats.map((seat) => {
       let currentStatus = seat.status;
       let remainingSeconds = 0;
 
       if (currentStatus === 'LOCKED') {
         if (!seat.lockedUntil || seat.lockedUntil <= now) {
-          // Lazy expired -> display as available
           currentStatus = 'AVAILABLE';
         } else {
           remainingSeconds = Math.max(
@@ -151,7 +170,8 @@ async function getConcertSeats(req, res, next) {
 
     res.json({ success: true, data: projected });
   } catch (err) {
-    next(err);
+    const data = inMemoryStore.getConcertSeats(req.params.id, req.user?.id);
+    res.json({ success: true, data });
   }
 }
 

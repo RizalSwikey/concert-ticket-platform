@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { api } from './services/api';
+import { useToast } from './context/ToastContext';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import ConcertCard from './components/ConcertCard';
@@ -10,9 +12,10 @@ import ConcurrencySimulator from './components/ConcurrencySimulator';
 import CheckoutDrawer from './components/CheckoutDrawer';
 import TicketModal from './components/TicketModal';
 import Footer from './components/Footer';
-import { Sparkles, AlertCircle, ShoppingCart, RefreshCw, Zap } from 'lucide-react';
+import { ShoppingCart, RefreshCw, Sparkles } from 'lucide-react';
 
 export default function App() {
+  const { addToast } = useToast();
   const [concerts, setConcerts] = useState([]);
   const [selectedConcert, setSelectedConcert] = useState(null);
   const [seats, setSeats] = useState([]);
@@ -22,7 +25,6 @@ export default function App() {
   const [activeTicketOrder, setActiveTicketOrder] = useState(null);
   const [loadingConcerts, setLoadingConcerts] = useState(true);
   const [loadingSeats, setLoadingSeats] = useState(false);
-  const [notification, setNotification] = useState(null);
 
   const seatingSectionRef = useRef(null);
 
@@ -39,7 +41,11 @@ export default function App() {
       }
     } catch (err) {
       console.error('Failed to load concerts:', err);
-      showNotice('error', 'Failed to load concerts: ' + err.message);
+      addToast({
+        type: 'error',
+        title: 'Fetch Error',
+        message: 'Failed to load concerts: ' + err.message
+      });
     } finally {
       setLoadingConcerts(false);
     }
@@ -56,7 +62,11 @@ export default function App() {
       }
     } catch (err) {
       console.error('Failed to load seating map:', err);
-      showNotice('error', 'Failed to load seats: ' + err.message);
+      addToast({
+        type: 'error',
+        title: 'Seating Map Error',
+        message: 'Failed to load seats: ' + err.message
+      });
     } finally {
       setLoadingSeats(false);
     }
@@ -82,21 +92,20 @@ export default function App() {
     return () => clearInterval(interval);
   }, [selectedConcert?._id]);
 
-  const showNotice = (type, message) => {
-    setNotification({ type, message });
-    setTimeout(() => setNotification(null), 5000);
-  };
-
   // Toggle seat selection with atomic locking
   const handleToggleSeat = async (seat) => {
     const isAlreadySelected = selectedSeats.some((s) => s._id === seat._id);
 
     if (isAlreadySelected) {
-      // User deselects: unlock seat
       const nextSelected = selectedSeats.filter((s) => s._id !== seat._id);
       setSelectedSeats(nextSelected);
       try {
         await api.unlockSeats([seat._id]);
+        addToast({
+          type: 'info',
+          title: 'Seat Released',
+          message: `Seat ${seat.seatNumber} unlocked back to pool.`
+        });
         loadSeats(selectedConcert._id);
       } catch (err) {
         console.warn('Unlock error:', err);
@@ -104,30 +113,41 @@ export default function App() {
       return;
     }
 
-    // Adding seat: limit to 4 seats
     if (selectedSeats.length >= 4) {
-      showNotice('warning', 'Maximum 4 seats can be reserved in one transaction.');
+      addToast({
+        type: 'warning',
+        title: 'Limit Reached',
+        message: 'Maximum 4 seats can be reserved in one transaction.'
+      });
       return;
     }
 
-    // Call atomic lock backend
     const targetSeatIds = [...selectedSeats.map((s) => s._id), seat._id];
     try {
       const lockRes = await api.lockSeats(selectedConcert._id, targetSeatIds);
       if (lockRes.success) {
         setSelectedSeats([...selectedSeats, seat]);
         setLockExpiresIn(lockRes.expiresInSeconds || 600);
-        showNotice('success', `Seat ${seat.seatNumber} atomically locked for 10 minutes!`);
+        addToast({
+          type: 'info',
+          title: 'Atomic Lock Granted',
+          message: `Seat ${seat.seatNumber} locked for 10 minutes exclusively for you.`
+        });
         loadSeats(selectedConcert._id);
       }
     } catch (err) {
       if (err.status === 409) {
-        showNotice(
-          'error',
-          `Seat conflict: ${seat.seatNumber} was just claimed by another user. Please choose another seat.`
-        );
+        addToast({
+          type: 'warning',
+          title: 'Seat Conflict (409)',
+          message: `Seat ${seat.seatNumber} was claimed by another attendee at the same millisecond.`
+        });
       } else {
-        showNotice('error', err.message || 'Failed to lock seat');
+        addToast({
+          type: 'error',
+          title: 'Lock Error',
+          message: err.message || 'Failed to acquire lock'
+        });
       }
       loadSeats(selectedConcert._id);
     }
@@ -159,31 +179,8 @@ export default function App() {
       <Navbar
         onSeedComplete={() => {
           loadConcerts();
-          showNotice('success', 'Database re-seeded with realistic seat distributions.');
         }}
       />
-
-      {/* Floating System Notifications */}
-      {notification && (
-        <div className="fixed top-24 right-4 z-50 animate-slideLeft">
-          <div
-            className={`flex items-center space-x-2 px-4 py-3 rounded-2xl backdrop-blur-xl border shadow-xl text-xs font-mono ${
-              notification.type === 'success'
-                ? 'bg-verdant/20 border-verdant/60 text-emerald-200'
-                : notification.type === 'warning'
-                ? 'bg-saffron/20 border-saffron/60 text-amber-200'
-                : 'bg-red-950/80 border-red-500/60 text-red-200'
-            }`}
-          >
-            {notification.type === 'success' ? (
-              <Sparkles className="w-4 h-4 text-verdant shrink-0" />
-            ) : (
-              <AlertCircle className="w-4 h-4 shrink-0" />
-            )}
-            <span>{notification.message}</span>
-          </div>
-        </div>
-      )}
 
       {/* Hero Section */}
       <Hero onExploreClick={scrollToSeating} />
@@ -207,11 +204,11 @@ export default function App() {
           </div>
 
           {loadingConcerts ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[1, 2, 3].map((n) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((n) => (
                 <div
                   key={n}
-                  className="h-64 rounded-3xl bg-void-card/40 border border-void-border animate-pulse"
+                  className="h-80 rounded-3xl bg-void-card/40 border border-void-border animate-pulse"
                 />
               ))}
             </div>
@@ -279,41 +276,48 @@ export default function App() {
       </main>
 
       {/* Floating Bottom Action Bar (When Seats are Selected) */}
-      {selectedSeats.length > 0 && selectedConcert && (
-        <aside
-          aria-label="Reservation Summary Bar"
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-11/12 max-w-2xl bg-void-surface/95 border border-iris/50 rounded-full p-3 sm:px-6 backdrop-blur-2xl shadow-iris-glow flex items-center justify-between animate-slideUp"
-        >
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-full bg-iris/20 border border-iris/40 flex items-center justify-center text-iris">
-              <ShoppingCart className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <div className="flex items-center space-x-2">
-                <span className="font-mono text-xs font-semibold text-bone">
-                  {selectedSeats.length} Seat{selectedSeats.length > 1 ? 's' : ''} Locked
-                </span>
-                <span className="text-[10px] font-mono text-saffron bg-saffron/10 px-2 py-0.5 rounded-full border border-saffron/20">
-                  10m TTL
-                </span>
-              </div>
-              <p className="text-[11px] font-mono text-silver">
-                Total:{' '}
-                <strong className="text-bone">
-                  {formatIDR(selectedSeats.reduce((sum, s) => sum + s.price, 0))}
-                </strong>
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => setIsDrawerOpen(true)}
-            className="px-6 py-2.5 rounded-full bg-iris hover:bg-iris-hover text-white text-xs font-semibold tracking-wide uppercase shadow-iris-glow transition-all cursor-pointer"
+      <AnimatePresence>
+        {selectedSeats.length > 0 && selectedConcert && (
+          <motion.aside
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            aria-label="Reservation Summary Bar"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-11/12 max-w-2xl bg-void-surface/95 border border-iris/50 rounded-full p-3 sm:px-6 backdrop-blur-2xl shadow-iris-glow flex items-center justify-between"
           >
-            Review & Pay
-          </button>
-        </aside>
-      )}
+            <div className="flex items-center space-x-3">
+              <div className="w-9 h-9 rounded-full bg-iris/20 border border-iris/40 flex items-center justify-center text-iris">
+                <ShoppingCart className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <div className="flex items-center space-x-2">
+                  <span className="font-mono text-xs font-semibold text-bone">
+                    {selectedSeats.length} Seat{selectedSeats.length > 1 ? 's' : ''} Locked
+                  </span>
+                  <span className="text-[10px] font-mono text-saffron bg-saffron/10 px-2 py-0.5 rounded-full border border-saffron/20 font-semibold">
+                    10m TTL
+                  </span>
+                </div>
+                <p className="text-[11px] font-mono text-silver">
+                  Total:{' '}
+                  <strong className="text-bone">
+                    {formatIDR(selectedSeats.reduce((sum, s) => sum + s.price, 0))}
+                  </strong>
+                </p>
+              </div>
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => setIsDrawerOpen(true)}
+              className="px-6 py-2.5 rounded-full bg-iris hover:bg-iris-hover text-white text-xs font-semibold tracking-wide uppercase shadow-iris-glow transition-all cursor-pointer"
+            >
+              Review & Pay
+            </motion.button>
+          </motion.aside>
+        )}
+      </AnimatePresence>
 
       {/* Checkout Slide-Over Drawer */}
       {selectedConcert && (

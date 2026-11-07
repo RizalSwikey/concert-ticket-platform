@@ -11,24 +11,41 @@ async function connectDB() {
     return cached.conn;
   }
 
-  const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/concert_reservation';
+  const uri = process.env.MONGODB_URI;
+
+  if (!uri || !uri.startsWith('mongodb')) {
+    global.__isFallbackMode = true;
+    return null;
+  }
 
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 4000,
       socketTimeoutMS: 45000
     };
 
-    cached.promise = mongoose.connect(uri, opts).then((m) => m);
+    cached.promise = mongoose
+      .connect(uri, opts)
+      .then((m) => {
+        global.__isFallbackMode = false;
+        return m;
+      })
+      .catch((err) => {
+        console.warn('MongoDB connection failed. Switching to In-Memory High-Concurrency Engine:', err.message);
+        global.__isFallbackMode = true;
+        cached.promise = null;
+        return null;
+      });
   }
 
   try {
     cached.conn = await cached.promise;
   } catch (e) {
+    global.__isFallbackMode = true;
     cached.promise = null;
-    throw e;
+    return null;
   }
 
   return cached.conn;
