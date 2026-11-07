@@ -1,0 +1,26 @@
+{
+  "name": "concert-ticket-anti-double-booking",
+  "version": "1.0.0",
+  "private": true,
+  "description": "High-Concurrency Concert Ticket & Seat Reservation Platform (Anti Double-Booking) by Rizal Akbar Syah Fauzan Putra",
+  "scripts": {
+    "dev:server": "node api/server.js",
+    "dev:client": "npm --prefix client run dev",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "build:client": "npm --prefix client install && npm --prefix client run build",
+    "build": "npm --prefix client install && npm --prefix client run build",
+    "seed": "node api/scripts/seedLocal.js",
+    "test": "node test/atomicLock.test.js",
+    "start": "node api/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.3.2"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
