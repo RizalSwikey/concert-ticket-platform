@@ -14,6 +14,39 @@ const LIVE_ATTENDEE_ACTIVITIES = [
 export default function Hero({ onExploreClick }) {
   const [tickerIndex, setTickerIndex] = useState(0);
   const [activeNodes, setActiveNodes] = useState([7, 14, 22, 29, 38]);
+  const [tilt, setTilt] = useState({ x: 0, y: 0, active: false });
+
+  // ponytail: smooth CSS cubic-bezier transition handles 60fps tilt; add rAF spring physics if WebGL requested
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width;
+    const py = (e.clientY - rect.top) / rect.height;
+    setTilt({
+      x: (px - 0.5) * 22,
+      y: -(py - 0.5) * 22,
+      active: true
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setTilt({ x: 0, y: 0, active: false });
+  };
+
+  const handleTouchMove = (e) => {
+    if (!e.touches[0]) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const px = (e.touches[0].clientX - rect.left) / rect.width;
+    const py = (e.touches[0].clientY - rect.top) / rect.height;
+    setTilt({
+      x: Math.max(-1, Math.min(1, (px - 0.5) * 2)) * 16,
+      y: -Math.max(-1, Math.min(1, (py - 0.5) * 2)) * 16,
+      active: true
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setTilt({ x: 0, y: 0, active: false });
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -142,71 +175,170 @@ export default function Hero({ onExploreClick }) {
             </div>
           </motion.div>
 
-          {/* Right Column: Live Interactive Soundbooth Preview */}
+          {/* Right Column: Interactive 3D Stage Showcase */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.15, ease: 'easeOut' }}
-            className="lg:col-span-5 relative flex items-center justify-center w-full"
+            className="lg:col-span-5 relative flex items-center justify-center w-full perspective-1200 py-4"
           >
-            <div className="w-full max-w-sm sm:max-w-md mx-auto rounded-3xl bg-void-surface/90 border border-void-border p-5 sm:p-6 relative overflow-hidden flex flex-col justify-between shadow-ambient-stage backdrop-blur-2xl">
-              {/* Stage Equalizer Header */}
-              <div className="relative pb-4 border-b border-void-border">
+            {/* 3D Tilt Stage Card Wrapper */}
+            <div
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              style={{
+                transform: tilt.active
+                  ? `rotateX(${tilt.y}deg) rotateY(${tilt.x}deg) translateZ(0px)`
+                  : undefined,
+                transition: tilt.active ? 'transform 0.15s cubic-bezier(0.2, 0, 0, 1)' : 'transform 0.8s ease-out'
+              }}
+              className={`w-full max-w-sm sm:max-w-md mx-auto rounded-3xl bg-void-surface/90 border border-void-border p-5 sm:p-6 relative preserve-3d shadow-ambient-stage backdrop-blur-2xl ${
+                !tilt.active ? 'animate-stage-float' : ''
+              }`}
+            >
+              {/* Orbital Acoustic Wave Rings (translateZ: 18px & 35px) */}
+              <div
+                style={{ transform: 'translateZ(18px)' }}
+                className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl"
+              >
+                <div className="absolute top-1/2 left-1/2 w-64 h-40 border border-iris/30 rounded-full animate-acoustic-pulse pointer-events-none" />
+                <div
+                  style={{ animationDelay: '-2.5s' }}
+                  className="absolute top-1/2 left-1/2 w-80 h-52 border border-saffron/20 rounded-full animate-acoustic-pulse pointer-events-none"
+                />
+                <div
+                  style={{ animationDelay: '-4s' }}
+                  className="absolute top-1/2 left-1/2 w-96 h-60 border border-verdant/20 rounded-full animate-acoustic-pulse pointer-events-none"
+                />
+              </div>
+
+              {/* Floating Stage Header & Equalizer (translateZ: 50px) */}
+              <div
+                style={{ transform: 'translateZ(50px)' }}
+                className="relative pb-4 border-b border-void-border preserve-3d"
+              >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-1.5 text-[10px] font-mono tracking-widest uppercase text-silver">
                     <Radio className="w-3.5 h-3.5 text-iris animate-pulse" />
-                    <span>MAIN STAGE LIVE SOUNDBOOTH</span>
+                    <span>3D ACOUSTIC STAGE SHOWCASE</span>
                   </div>
-                  {/* Equalizer Frequency Bars */}
-                  <div className="flex items-end space-x-1 h-4">
-                    <span className="w-1 bg-iris rounded-full animate-eq-1" />
-                    <span className="w-1 bg-verdant rounded-full animate-eq-2" />
-                    <span className="w-1 bg-saffron rounded-full animate-eq-3" />
-                    <span className="w-1 bg-iris rounded-full animate-eq-4" />
-                    <span className="w-1 bg-verdant rounded-full animate-eq-1" />
-                  </div>
+                  <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-iris/15 text-iris border border-iris/30 font-semibold">
+                    {tilt.active ? 'TILT ROTATING' : '3D IDLE FLOATING'}
+                  </span>
                 </div>
 
-                <div className="h-1.5 w-full bg-gradient-to-r from-iris via-verdant to-saffron rounded-full shadow-iris-glow" />
+                {/* Stage Equalizer Frequency Bars */}
+                <div className="flex items-end justify-between h-5 pt-1 px-1">
+                  <div className="flex items-end space-x-1.5 h-full">
+                    <span className="w-1.5 bg-iris rounded-full animate-eq-1 shadow-iris-glow" />
+                    <span className="w-1.5 bg-verdant rounded-full animate-eq-2" />
+                    <span className="w-1.5 bg-saffron rounded-full animate-eq-3" />
+                    <span className="w-1.5 bg-iris rounded-full animate-eq-4" />
+                    <span className="w-1.5 bg-verdant rounded-full animate-eq-1" />
+                    <span className="w-1.5 bg-saffron rounded-full animate-eq-3" />
+                  </div>
+                  <span className="text-[10px] font-mono text-silver">
+                    120 FPS AUDIO SYNC
+                  </span>
+                </div>
+
+                <div className="h-1.5 w-full bg-gradient-to-r from-iris via-verdant to-saffron rounded-full shadow-iris-glow mt-2" />
               </div>
 
-              {/* Dynamic Simulated Seat Grid Constellation */}
-              <div className="grid grid-cols-8 gap-2 py-6 px-1 my-auto">
+              {/* 3D Equalizer Pillars Deck (translateZ: 35px) */}
+              <div
+                style={{ transform: 'translateZ(35px)' }}
+                className="flex items-end justify-center space-x-2 pt-4 pb-2 preserve-3d"
+              >
+                {[
+                  { h: 'h-7', delay: '0.1s', color: 'from-iris to-iris-hover' },
+                  { h: 'h-10', delay: '0.3s', color: 'from-verdant to-emerald-400' },
+                  { h: 'h-14', delay: '0.15s', color: 'from-saffron to-amber-300' },
+                  { h: 'h-16', delay: '0.4s', color: 'from-iris to-purple-400' },
+                  { h: 'h-12', delay: '0.2s', color: 'from-verdant to-teal-300' },
+                  { h: 'h-8', delay: '0.35s', color: 'from-saffron to-amber-400' }
+                ].map((pillar, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      animationDelay: pillar.delay,
+                      transform: `translateZ(${15 + idx * 4}px)`
+                    }}
+                    className={`w-3.5 ${pillar.h} rounded-t-sm bg-gradient-to-t ${pillar.color} shadow-lg border-t border-white/40 animate-pulse`}
+                  />
+                ))}
+              </div>
+
+              {/* Floating Multi-Layer Seat Nodes Grid (translateZ: 20px, 45px, 70px) */}
+              <div className="grid grid-cols-8 gap-2 py-4 px-1 my-auto preserve-3d">
                 {Array.from({ length: 48 }).map((_, i) => {
+                  const rowIdx = Math.floor(i / 8); // 0 to 5
                   const isActive = activeNodes.includes(i);
                   const isSold = i % 7 === 0;
                   const isLocked = !isSold && (i === 11 || i === 23 || i === 35);
 
-                  let colorClass = 'bg-zinc-800/80 border-white/5 hover:bg-zinc-700';
+                  // Depth tiering: Back rows (CAT 2: 20px), Mid rows (CAT 1: 45px), Front rows (VIP: 70px)
+                  const depthZ = rowIdx < 2 ? 20 : rowIdx < 4 ? 45 : 70;
+                  const elevatedZ = isActive ? depthZ + 16 : depthZ;
+
+                  let colorClass = 'bg-zinc-800/80 border-white/10 hover:bg-zinc-700 text-zinc-400';
                   let statusText = 'Available for Reservation';
+                  let tierLabel = rowIdx < 2 ? 'CAT 2' : rowIdx < 4 ? 'CAT 1' : 'VIP';
 
                   if (isActive) {
-                    colorClass = 'bg-iris border-bone shadow-iris-glow scale-105';
+                    colorClass = 'bg-iris border-bone shadow-iris-glow text-white scale-110';
                     statusText = 'Seat Selected (In Checkout)';
                   } else if (isLocked) {
-                    colorClass = 'bg-saffron/30 border-saffron/70 text-saffron animate-pulse';
+                    colorClass = 'bg-saffron/30 border-saffron/80 text-saffron animate-pulse';
                     statusText = 'Reserved (10m Lock)';
                   } else if (isSold) {
-                    colorClass = 'bg-zinc-900 border-white/5 opacity-35';
+                    colorClass = 'bg-zinc-900/90 border-white/5 opacity-35 text-zinc-600';
                     statusText = 'Booked / Sold Out';
                   }
 
                   return (
-                    <motion.div
+                    <div
                       key={i}
-                      whileHover={{ scale: 1.25, zIndex: 20 }}
-                      className={`h-4 rounded-sm border transition-all cursor-pointer relative group ${colorClass}`}
+                      style={{
+                        transform: `translateZ(${elevatedZ}px)`,
+                        transition: 'transform 0.25s cubic-bezier(0.2, 0, 0, 1)'
+                      }}
+                      className={`h-4.5 rounded-sm border transition-all cursor-pointer relative group flex items-center justify-center ${colorClass}`}
                     >
-                      <div className="hidden group-hover:block absolute bottom-full mb-1 left-1/2 -translate-x-1/2 z-30 px-2 py-0.5 rounded bg-void-card border border-void-border text-[9px] font-mono text-bone whitespace-nowrap shadow-xl">
-                        Seat #{i + 1}: {statusText}
+                      <span className="text-[7px] font-mono opacity-60 pointer-events-none">
+                        {tierLabel[0]}
+                      </span>
+                      <div className="hidden group-hover:block absolute bottom-full mb-1 left-1/2 -translate-x-1/2 z-40 px-2 py-0.5 rounded bg-void-card border border-void-border text-[9px] font-mono text-bone whitespace-nowrap shadow-2xl pointer-events-none">
+                        {tierLabel} #{i + 1}: {statusText} (Z: {elevatedZ}px)
                       </div>
-                    </motion.div>
+                    </div>
                   );
                 })}
               </div>
 
-              {/* Live Attendee Activity Ticker Bar */}
-              <div className="pt-4 border-t border-void-border space-y-2">
+              {/* Floating 3D VIP Pass Hologram Badge (translateZ: 85px) */}
+              <div
+                style={{ transform: 'translateZ(85px)' }}
+                className="my-2 p-2.5 rounded-xl bg-gradient-to-r from-iris/20 via-verdant/20 to-saffron/20 border border-iris/40 backdrop-blur-md flex items-center justify-between shadow-iris-glow preserve-3d"
+              >
+                <div className="flex items-center space-x-2">
+                  <Ticket className="w-3.5 h-3.5 text-iris" />
+                  <span className="text-[10px] font-mono text-bone font-semibold tracking-wide">
+                    VIP SOUNDBOOTH HOLOGRAPHIC PASS
+                  </span>
+                </div>
+                <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-verdant/20 text-verdant border border-verdant/30 font-semibold">
+                  AUTHENTIC 3D NODE
+                </span>
+              </div>
+
+              {/* Live Attendee Activity Ticker Bar (translateZ: 30px) */}
+              <div
+                style={{ transform: 'translateZ(30px)' }}
+                className="pt-3 border-t border-void-border space-y-1.5 preserve-3d"
+              >
                 <div className="flex items-center justify-between text-[10px] font-mono text-silver">
                   <span className="flex items-center space-x-1">
                     <Sparkles className="w-3 h-3 text-verdant" />

@@ -6,7 +6,9 @@ import { Lock, Clock } from 'lucide-react';
 export default function SeatNode({
   seat,
   isSelected,
-  onToggle
+  onToggle,
+  is3D = false,
+  onHover
 }) {
   const { isDark } = useTheme();
   const [showTooltip, setShowTooltip] = useState(false);
@@ -54,19 +56,53 @@ export default function SeatNode({
     onToggle(seat);
   };
 
+  // 3D Extrusion on Z-axis for physical block depth in 3D Arena View
+  let style3D = undefined;
+  if (is3D) {
+    if (isSelected || isLockedByMe) {
+      style3D = {
+        transform: 'translateZ(18px) scale(1.08)',
+        boxShadow: isDark
+          ? '0 14px 28px -2px rgba(128, 82, 255, 0.7), 0 0 0 2px rgba(255, 255, 255, 0.95)'
+          : '0 12px 24px -2px rgba(99, 40, 255, 0.6), 0 0 0 2px #4B15E0',
+        transition: 'transform 0.25s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.25s ease'
+      };
+    } else if (isLocked) {
+      style3D = {
+        transform: 'translateZ(8px)',
+        boxShadow: '0 8px 18px -2px rgba(255, 184, 41, 0.55)',
+        transition: 'transform 0.25s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.25s ease'
+      };
+    } else if (isBooked) {
+      style3D = {
+        transform: 'translateZ(0px)',
+        transition: 'transform 0.25s ease'
+      };
+    } else {
+      style3D = {
+        transform: 'translateZ(3px)',
+        transition: 'transform 0.25s ease'
+      };
+    }
+  }
+
   return (
     <div
-      className="relative flex items-center justify-center"
-      onMouseEnter={() => setShowTooltip(true)}
+      className="relative flex items-center justify-center preserve-3d"
+      onMouseEnter={() => {
+        setShowTooltip(true);
+        onHover?.(seat);
+      }}
       onMouseLeave={() => setShowTooltip(false)}
     >
       <motion.button
         type="button"
         disabled={isBooked || (isLocked && !isLockedByMe)}
         onClick={handleClick}
-        whileHover={!isBooked && (!isLocked || isLockedByMe) ? { scale: 1.15 } : {}}
+        whileHover={!isBooked && (!isLocked || isLockedByMe) ? { scale: is3D ? 1.18 : 1.15 } : {}}
         whileTap={!isBooked && (!isLocked || isLockedByMe) ? { scale: 0.88 } : {}}
         transition={{ type: 'spring', stiffness: 450, damping: 25 }}
+        style={style3D}
         className={`w-9 h-9 sm:w-9 sm:h-9 rounded-md flex items-center justify-center text-[11px] font-mono font-medium transition-colors relative select-none shrink-0 ${stateClasses}`}
         aria-label={`Seat ${seat.seatNumber}`}
       >

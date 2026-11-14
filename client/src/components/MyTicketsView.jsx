@@ -4,7 +4,120 @@ import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import TicketModal from './TicketModal';
-import { Ticket, Calendar, MapPin, QrCode, Download, ArrowRight, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Ticket, Calendar, MapPin, QrCode, Download, ArrowRight, ShieldCheck, RefreshCw, Sparkles } from 'lucide-react';
+
+function MyTicketCardItem({ order, formattedDate, seatList, formatIDR, onOpenModal }) {
+  const [tilt, setTilt] = useState({ x: 0, y: 0, active: false });
+
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    setTilt({
+      x: (x - 0.5) * 14,
+      y: -(y - 0.5) * 14,
+      active: true
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setTilt({ x: 0, y: 0, active: false });
+  };
+
+  return (
+    <div className="perspective-1000 py-1">
+      <div
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{
+          transform: tilt.active
+            ? `rotateX(${tilt.y}deg) rotateY(${tilt.x}deg) translateZ(0px)`
+            : 'rotateX(0deg) rotateY(0deg) translateZ(0px)',
+          transition: tilt.active ? 'transform 0.12s ease-out' : 'transform 0.4s ease-out'
+        }}
+        className="rounded-3xl bg-void-surface border border-void-border hover:border-iris/50 shadow-lg p-6 space-y-5 flex flex-col justify-between preserve-3d backdrop-blur-xl relative overflow-hidden group"
+      >
+        {/* Holographic Iridescent Light Sheen */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-iris/10 via-transparent to-verdant/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-3xl" />
+
+        <div style={{ transform: 'translateZ(20px)' }} className="preserve-3d space-y-3">
+          {/* Status Banner */}
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-saffron px-2.5 py-0.5 rounded-full bg-saffron/10 border border-saffron/20 font-semibold">
+              {order.concertArtist}
+            </span>
+            <div className="flex items-center space-x-1 text-[10px] font-mono text-verdant bg-verdant/10 px-2.5 py-0.5 rounded-full border border-verdant/30 font-semibold">
+              <ShieldCheck className="w-3 h-3" />
+              <span>OFFICIAL 3D PASS</span>
+            </div>
+          </div>
+
+          {/* Concert Info */}
+          <h3 className="text-xl font-normal tracking-tight text-bone">
+            {order.concertTitle}
+          </h3>
+
+          <div className="space-y-1 text-xs text-silver font-light">
+            <div className="flex items-center space-x-2">
+              <Calendar className="w-3.5 h-3.5 text-ash" />
+              <span>{formattedDate}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <MapPin className="w-3.5 h-3.5 text-ash" />
+              <span className="truncate">{order.concertVenue}</span>
+            </div>
+          </div>
+
+          {/* Allocated Seats Badges */}
+          <div className="pt-3 mt-3 border-t border-void-border flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <span className="text-[10px] font-mono text-ash uppercase block mb-1">
+                Allocated Seats ({seatList.length})
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {seatList.map((seatNum, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-iris/20 text-iris border border-iris/40 shadow-sm"
+                  >
+                    {seatNum}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="text-right">
+              <span className="text-[10px] font-mono text-ash uppercase block mb-1">
+                Total Paid
+              </span>
+              <span className="text-sm font-mono font-semibold text-bone">
+                {formatIDR(order.totalAmount)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div
+          style={{ transform: 'translateZ(25px)' }}
+          className="pt-3 border-t border-void-border flex items-center justify-between z-10"
+        >
+          <span className="text-[10px] font-mono text-ash">
+            Order #{order.orderNumber}
+          </span>
+
+          <button
+            onClick={onOpenModal}
+            className="flex items-center space-x-1.5 px-4 py-2 rounded-full bg-iris hover:bg-iris-hover text-white transition-all text-xs font-mono font-semibold cursor-pointer shadow-iris-glow"
+          >
+            <QrCode className="w-3.5 h-3.5" />
+            <span>View 3D Pass</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function MyTicketsView({ onExploreClick }) {
   const { user, isAuthenticated, openAuthModal } = useAuth();
@@ -137,95 +250,30 @@ export default function MyTicketsView({ onExploreClick }) {
               : [];
 
             return (
-              <motion.div
+              <MyTicketCardItem
                 key={order._id || order.id}
-                whileHover={{ y: -4 }}
-                className="rounded-3xl bg-void-surface border border-void-border hover:border-iris/40 shadow-lg p-6 space-y-5 flex flex-col justify-between transition-all backdrop-blur-xl relative overflow-hidden"
-              >
-                {/* Holographic Subtle Corner Glow */}
-                <div className="absolute top-0 right-0 w-40 h-40 bg-iris/10 blur-[60px] pointer-events-none rounded-full" />
-
-                <div>
-                  {/* Status Banner */}
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-saffron px-2.5 py-0.5 rounded-full bg-saffron/10 border border-saffron/20 font-semibold">
-                      {concertArtist}
-                    </span>
-                    <div className="flex items-center space-x-1 text-[10px] font-mono text-verdant bg-verdant/10 px-2.5 py-0.5 rounded-full border border-verdant/30">
-                      <ShieldCheck className="w-3 h-3" />
-                      <span>OFFICIAL PASS</span>
-                    </div>
-                  </div>
-
-                  {/* Concert Info */}
-                  <h3 className="text-xl font-normal tracking-tight text-bone mb-2">
-                    {concertTitle}
-                  </h3>
-
-                  <div className="space-y-1 text-xs text-silver font-light">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="w-3.5 h-3.5 text-ash" />
-                      <span>{formattedDate}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="w-3.5 h-3.5 text-ash" />
-                      <span className="truncate">{concertVenue}</span>
-                    </div>
-                  </div>
-
-                  {/* Seats Badges */}
-                  <div className="pt-4 mt-4 border-t border-void-border flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <span className="text-[10px] font-mono text-ash uppercase block mb-1">
-                        Allocated Seats ({seatList.length})
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {seatList.map((seatNum, idx) => (
-                          <span
-                            key={idx}
-                            className="px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-iris/20 text-iris border border-iris/40"
-                          >
-                            {seatNum}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <span className="text-[10px] font-mono text-ash uppercase block mb-1">
-                        Total Paid
-                      </span>
-                      <span className="text-sm font-mono font-semibold text-bone">
-                        {formatIDR(order.totalAmount)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer Actions */}
-                <div className="pt-4 border-t border-void-border flex items-center justify-between">
-                  <span className="text-[10px] font-mono text-ash">
-                    Order #{order.orderNumber}
-                  </span>
-
-                  <button
-                    onClick={() =>
-                      setSelectedTicket({
-                        ...order,
-                        concertTitle,
-                        concertArtist,
-                        concertVenue,
-                        concertDate,
-                        seats: seatList
-                      })
-                    }
-                    className="flex items-center space-x-1.5 px-4 py-2 rounded-full bg-void-card hover:bg-iris text-silver hover:text-white border border-void-border hover:border-iris transition-all text-xs font-mono cursor-pointer shadow-sm"
-                  >
-                    <QrCode className="w-3.5 h-3.5" />
-                    <span>View Holographic Pass</span>
-                  </button>
-                </div>
-              </motion.div>
+                order={{
+                  ...order,
+                  concertTitle,
+                  concertArtist,
+                  concertVenue,
+                  concertDate,
+                  seats: seatList
+                }}
+                formattedDate={formattedDate}
+                seatList={seatList}
+                formatIDR={formatIDR}
+                onOpenModal={() =>
+                  setSelectedTicket({
+                    ...order,
+                    concertTitle,
+                    concertArtist,
+                    concertVenue,
+                    concertDate,
+                    seats: seatList
+                  })
+                }
+              />
             );
           })}
         </div>
