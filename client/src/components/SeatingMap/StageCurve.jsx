@@ -2,64 +2,71 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Radio } from 'lucide-react';
 
-export default function StageCurve({ is3D = false }) {
+export default function StageCurve() {
   return (
-    <div className={`w-full max-w-2xl mx-auto mb-8 text-center relative ${is3D ? 'preserve-3d' : ''}`}>
-      {/* Radial Neon Halo Glow behind stage */}
-      <motion.div
-        animate={{
-          opacity: [0.35, 0.7, 0.35],
-          scale: [0.98, 1.06, 0.98]
-        }}
-        transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute -top-6 left-1/2 -translate-x-1/2 w-3/4 h-16 bg-iris/30 blur-2xl rounded-full pointer-events-none"
-      />
+    <div className="w-full max-w-3xl mx-auto mb-8 text-center relative">
+      {/* Ambient Moving Stage Spotlights */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none -top-8 h-36">
+        <div className="absolute top-0 left-1/4 w-24 h-32 bg-gradient-to-b from-iris/35 to-transparent blur-2xl animate-laser-sweep-1" />
+        <div className="absolute top-0 right-1/4 w-24 h-32 bg-gradient-to-b from-emerald-400/30 to-transparent blur-2xl animate-laser-sweep-2" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-20 bg-iris/30 blur-3xl rounded-full" />
+      </div>
 
-      {is3D ? (
-        /* 3D Main Stage Wall Standing Upright (rotateX: -70deg) */
-        <div
-          style={{
-            transform: 'rotateX(-70deg) translateZ(12px)',
-            transformOrigin: 'bottom center'
-          }}
-          className="relative py-4 preserve-3d"
+      {/* Majestic Curved Stage Arc (Smooth Vector SVG) */}
+      <div className="relative py-2">
+        <svg
+          className="w-full h-16 sm:h-20 drop-shadow-[0_8px_24px_rgba(128,82,255,0.35)]"
+          viewBox="0 0 800 120"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          {/* Sweeping Moving Stage Laser / Spotlight Beams */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none h-28 -top-12">
-            <div className="absolute bottom-0 left-1/4 w-12 h-32 bg-gradient-to-t from-iris/60 via-purple-500/20 to-transparent blur-md animate-laser-sweep-1" />
-            <div className="absolute bottom-0 right-1/4 w-12 h-32 bg-gradient-to-t from-emerald-400/50 via-teal-400/20 to-transparent blur-md animate-laser-sweep-2" />
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-20 h-36 bg-gradient-to-t from-saffron/40 via-amber-300/15 to-transparent blur-lg" />
-          </div>
+          <defs>
+            <linearGradient id="stageGlowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#8052ff" stopOpacity="0.15" />
+              <stop offset="25%" stopColor="#8052ff" stopOpacity="0.85" />
+              <stop offset="50%" stopColor="#ffffff" stopOpacity="0.95" />
+              <stop offset="75%" stopColor="#15846e" stopOpacity="0.85" />
+              <stop offset="100%" stopColor="#15846e" stopOpacity="0.15" />
+            </linearGradient>
+            <linearGradient id="stageFillGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+              <stop offset="0%" stopColor="#8052ff" stopOpacity="0.3" />
+              <stop offset="60%" stopColor="#8052ff" stopOpacity="0.08" />
+              <stop offset="100%" stopColor="transparent" stopOpacity="0" />
+            </linearGradient>
+          </defs>
 
-          {/* Upright Monolithic Stage Screen Wall */}
-          <div className="h-16 w-full rounded-2xl border-2 border-iris/70 bg-gradient-to-b from-void-surface via-zinc-900 to-void-card shadow-ambient-stage relative overflow-hidden flex flex-col items-center justify-center p-3 backdrop-blur-xl">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-iris/30 via-transparent to-transparent pointer-events-none" />
-            
-            {/* Stage Acoustic Status */}
-            <div className="flex items-center space-x-2 text-[11px] font-mono tracking-widest uppercase text-bone z-10 font-bold">
-              <span className="w-2 h-2 rounded-full bg-verdant animate-ping" />
-              <span>MAIN ACOUSTIC STAGE • DOLBY ATMOS 3D</span>
-              <Sparkles className="w-3.5 h-3.5 text-saffron" />
-            </div>
-            <span className="text-[9px] font-mono text-silver tracking-wider uppercase mt-0.5">
-              Front-Row Direct Line-Of-Sight Apex (Viewing Distance: 8m)
-            </span>
-          </div>
-        </div>
-      ) : (
-        /* 2D Flat Curved Neon Stage Arc */
-        <div className="relative py-4">
-          <div className="h-8 w-full border-t-2 border-iris rounded-t-[140px] shadow-ambient-stage relative overflow-hidden bg-gradient-to-b from-iris/25 to-transparent">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent" />
-          </div>
+          {/* Stage Area Fill */}
+          <path
+            d="M 50 110 Q 400 10 750 110 L 720 118 Q 400 28 80 118 Z"
+            fill="url(#stageFillGrad)"
+          />
 
-          <div className="flex items-center justify-center space-x-2 text-[11px] font-mono tracking-widest uppercase text-silver pt-2">
-            <Radio className="w-3.5 h-3.5 text-iris animate-pulse" />
-            <span>STAGE // LIVE SOUNDBOOTH & ACOUSTIC APEX</span>
-            <Sparkles className="w-3.5 h-3.5 text-saffron" />
-          </div>
+          {/* Crisp Neon Stage Edge Line */}
+          <path
+            d="M 50 110 Q 400 10 750 110"
+            stroke="url(#stageGlowGrad)"
+            strokeWidth="3.5"
+            strokeLinecap="round"
+          />
+
+          {/* Subtle Outer Neon Halo */}
+          <path
+            d="M 50 110 Q 400 10 750 110"
+            stroke="#8052ff"
+            strokeWidth="8"
+            strokeOpacity="0.25"
+            strokeLinecap="round"
+            className="blur-sm"
+          />
+        </svg>
+
+        {/* Stage Audio Apex Indicators */}
+        <div className="flex items-center justify-center space-x-2 text-xs font-mono tracking-widest uppercase text-silver pt-1">
+          <Radio className="w-3.5 h-3.5 text-iris animate-pulse" />
+          <span className="font-semibold text-bone">MAIN STAGE // LIVE SOUNDBOOTH & ACOUSTIC APEX</span>
+          <Sparkles className="w-3.5 h-3.5 text-saffron" />
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -16,7 +16,7 @@ import VenuesView from './components/VenuesView';
 import AuthModal from './components/AuthModal';
 import EngineInspectorModal from './components/EngineInspectorModal';
 import Footer from './components/Footer';
-import { ShoppingCart, RefreshCw, Search, Sparkles, Terminal, SlidersHorizontal } from 'lucide-react';
+import { ShoppingCart, RefreshCw, Search, Sparkles, Terminal, SlidersHorizontal, Clock, ArrowRight } from 'lucide-react';
 
 const CATEGORIES = [
   'All Events',
@@ -36,11 +36,30 @@ export default function App() {
   const [seats, setSeats] = useState([]);
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [lockExpiresIn, setLockExpiresIn] = useState(600);
+  const [lockTimeLeft, setLockTimeLeft] = useState(600);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeTicketOrder, setActiveTicketOrder] = useState(null);
   const [loadingConcerts, setLoadingConcerts] = useState(true);
   const [loadingSeats, setLoadingSeats] = useState(false);
   const [myTicketsCount, setMyTicketsCount] = useState(0);
+
+  // Live countdown timer for selected seats
+  useEffect(() => {
+    if (selectedSeats.length === 0) {
+      setLockTimeLeft(600);
+      return;
+    }
+    const timer = setInterval(() => {
+      setLockTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [selectedSeats.length]);
+
+  const formatLockTimer = (sec) => {
+    const mins = Math.floor(sec / 60);
+    const secs = sec % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Search & Category Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -97,19 +116,29 @@ export default function App() {
   };
 
   // Load user tickets count
+  // Load user tickets count (combines localStorage and backend store)
   const loadUserTicketsCount = async () => {
+    let count = 0;
+    try {
+      const rawLocal = localStorage.getItem('reserva_orders');
+      const localOrders = rawLocal ? JSON.parse(rawLocal) : [];
+      count = localOrders.length;
+    } catch {}
+
     if (isAuthenticated) {
       try {
         const res = await api.getMyOrders();
-        if (res.success && res.data) {
-          setMyTicketsCount(res.data.length);
+        if (res.success && Array.isArray(res.data)) {
+          const rawLocal = localStorage.getItem('reserva_orders');
+          const localOrders = rawLocal ? JSON.parse(rawLocal) : [];
+          const map = new Map();
+          localOrders.forEach((o) => map.set(o.orderNumber || o.id || o._id, o));
+          res.data.forEach((o) => map.set(o.orderNumber || o.id || o._id, o));
+          count = map.size;
         }
-      } catch {
-        // silent
-      }
-    } else {
-      setMyTicketsCount(0);
+      } catch {}
     }
+    setMyTicketsCount(count);
   };
 
   useEffect(() => {
@@ -137,22 +166,31 @@ export default function App() {
   }, [selectedConcert?._id, activeTab]);
 
   // Toggle seat selection with auth requirement
-  const handleToggleSeat = async (seat) => {
-    if (!isAuthenticated) {
+  // Seamless seat selection with auto-auth resume
+  const handleToggleSeat = async (seat, authenticatedUser = null) => {
+    const activeUser = authenticatedUser || user;
+    const token = localStorage.getItem('reserva_token');
+
+    if (!activeUser && !token) {
       addToast({
         type: 'info',
-        title: 'Member Authentication Required',
-        message: 'Please sign in or use Demo Pass before reserving your seat.'
+        title: 'Sign In to Reserve',
+        message: `Use Instant Demo Login to auto-lock Seat ${seat.seatNumber} immediately.`
       });
-      openAuthModal('signin', () => {
-        handleToggleSeat(seat);
+      openAuthModal('signin', async (loggedInUser) => {
+        await executeSeatToggle(seat, loggedInUser);
       });
       return;
     }
 
+    await executeSeatToggle(seat, activeUser);
+  };
+
+  const executeSeatToggle = async (seat) => {
     const isAlreadySelected = selectedSeats.some((s) => s._id === seat._id);
 
     if (isAlreadySelected) {
+      // Instant UI response: unselect seat
       const nextSelected = selectedSeats.filter((s) => s._id !== seat._id);
       setSelectedSeats(nextSelected);
       try {
@@ -162,9 +200,10 @@ export default function App() {
           title: 'Seat Released',
           message: `Seat ${seat.seatNumber} unlocked back to venue pool.`
         });
-        loadSeats(selectedConcert._id);
       } catch (err) {
         console.warn('Unlock error:', err);
+      } finally {
+        loadSeats(selectedConcert._id);
       }
       return;
     }
@@ -178,25 +217,29 @@ export default function App() {
       return;
     }
 
-    const targetSeatIds = [...selectedSeats.map((s) => s._id), seat._id];
+    // Instant optimistic response: turn seat purple immediately
+    const optimisticSelected = [...selectedSeats, { ...seat, isLockedByMe: true }];
+    setSelectedSeats(optimisticSelected);
+
     try {
-      const lockRes = await api.lockSeats(selectedConcert._id, targetSeatIds);
+      const lockRes = await api.lockSeats(selectedConcert._id, [seat._id]);
       if (lockRes.success) {
-        setSelectedSeats([...selectedSeats, seat]);
         setLockExpiresIn(lockRes.expiresInSeconds || 600);
+        setLockTimeLeft(lockRes.expiresInSeconds || 600);
         addToast({
-          type: 'info',
+          type: 'success',
           title: 'Seat Held (10-Min TTL)',
           message: `Seat ${seat.seatNumber} is now held exclusively for you.`
         });
-        loadSeats(selectedConcert._id);
       }
     } catch (err) {
+      // Revert optimistic selection on failure
+      setSelectedSeats((prev) => prev.filter((s) => s._id !== seat._id));
       if (err.status === 409) {
         addToast({
           type: 'warning',
           title: 'Seat Just Taken (409 Conflict)',
-          message: `Seat ${seat.seatNumber} was claimed by another attendee at the same millisecond.`
+          message: `Seat ${seat.seatNumber} was claimed by another attendee.`
         });
       } else {
         addToast({
@@ -205,6 +248,7 @@ export default function App() {
           message: err.message || 'Failed to acquire seat lock.'
         });
       }
+    } finally {
       loadSeats(selectedConcert._id);
     }
   };
@@ -213,6 +257,19 @@ export default function App() {
     setIsDrawerOpen(false);
     setSelectedSeats([]);
     setActiveTicketOrder(order);
+
+    // Store order in localStorage to persist across serverless restarts
+    try {
+      const rawLocal = localStorage.getItem('reserva_orders');
+      const localOrders = rawLocal ? JSON.parse(rawLocal) : [];
+      const exists = localOrders.some((o) => (o.orderNumber || o._id) === (order.orderNumber || order._id));
+      if (!exists) {
+        localStorage.setItem('reserva_orders', JSON.stringify([order, ...localOrders]));
+      }
+    } catch (e) {
+      console.warn('LocalStorage error:', e);
+    }
+
     loadSeats(selectedConcert._id);
     loadConcerts(true);
     loadUserTicketsCount();
@@ -395,32 +452,45 @@ export default function App() {
         )}
       </main>
 
-      {/* Floating Bottom Reservation Bar (When Seats are Selected) */}
+      {/* Sticky Bottom Reservation Summary Bar (When Seats are Selected) */}
       <AnimatePresence>
         {selectedSeats.length > 0 && selectedConcert && activeTab === 'discover' && (
           <motion.aside
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 40 }}
+            exit={{ opacity: 0, y: 50 }}
             aria-label="Reservation Summary Bar"
-            className="fixed bottom-16 md:bottom-6 left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:w-11/12 max-w-2xl z-40 bg-void-surface/95 border border-iris/50 rounded-2xl sm:rounded-full p-3 sm:px-6 backdrop-blur-2xl shadow-iris-glow flex items-center justify-between"
+            className="fixed bottom-14 md:bottom-6 left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:w-11/12 max-w-3xl z-50 bg-void-surface/95 border-2 border-iris/60 rounded-2xl sm:rounded-full p-3 sm:px-6 backdrop-blur-2xl shadow-[0_10px_40px_rgba(128,82,255,0.4)] flex flex-col sm:flex-row items-center justify-between gap-3"
           >
-            <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 rounded-full bg-iris/20 border border-iris/40 flex items-center justify-center text-iris">
-                <ShoppingCart className="w-4 h-4" />
+            <div className="flex items-center space-x-3 w-full sm:w-auto">
+              <div className="w-10 h-10 rounded-full bg-iris/20 border border-iris/40 flex items-center justify-center text-iris shrink-0 shadow-sm">
+                <ShoppingCart className="w-5 h-5" />
               </div>
-              <div className="text-left">
-                <div className="flex items-center space-x-2">
-                  <span className="font-mono text-xs font-semibold text-bone">
-                    {selectedSeats.length} Seat{selectedSeats.length > 1 ? 's' : ''} Held
+              <div className="text-left flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-xs font-bold text-bone">
+                    {selectedSeats.length} Seat{selectedSeats.length > 1 ? 's' : ''} Selected:
                   </span>
-                  <span className="text-[10px] font-mono text-saffron bg-saffron/10 px-2 py-0.5 rounded-full border border-saffron/20 font-semibold">
-                    10m TTL Active
+                  {/* Selected Seat Badges */}
+                  <div className="flex flex-wrap gap-1">
+                    {selectedSeats.map((s) => (
+                      <span
+                        key={s._id}
+                        className="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-iris text-white shadow-sm"
+                      >
+                        {s.tier}-{s.seatNumber}
+                      </span>
+                    ))}
+                  </div>
+                  {/* 10-Minute Countdown Timer */}
+                  <span className="text-[10px] font-mono text-saffron bg-saffron/15 px-2 py-0.5 rounded-full border border-saffron/30 font-semibold flex items-center space-x-1">
+                    <Clock className="w-3 h-3 text-saffron animate-pulse" />
+                    <span>{formatLockTimer(lockTimeLeft)} Left</span>
                   </span>
                 </div>
-                <p className="text-[11px] font-mono text-silver">
+                <p className="text-xs font-mono text-silver mt-1">
                   Total:{' '}
-                  <strong className="text-bone">
+                  <strong className="text-bone text-sm">
                     {formatIDR(selectedSeats.reduce((sum, s) => sum + s.price, 0))}
                   </strong>
                 </p>
@@ -428,12 +498,13 @@ export default function App() {
             </div>
 
             <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               onClick={() => setIsDrawerOpen(true)}
-              className="px-6 py-2.5 rounded-full bg-iris hover:bg-iris-hover text-white text-xs font-semibold tracking-wide uppercase shadow-iris-glow transition-all cursor-pointer"
+              className="w-full sm:w-auto px-6 py-3 rounded-full bg-iris hover:bg-iris-hover text-white text-xs font-mono font-bold tracking-wide uppercase shadow-iris-glow transition-all flex items-center justify-center space-x-2 shrink-0 cursor-pointer"
             >
-              Checkout
+              <span>Checkout &amp; Issue Ticket</span>
+              <ArrowRight className="w-4 h-4" />
             </motion.button>
           </motion.aside>
         )}

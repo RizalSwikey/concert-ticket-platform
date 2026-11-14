@@ -127,21 +127,30 @@ export default function MyTicketsView({ onExploreClick }) {
   const [selectedTicket, setSelectedTicket] = useState(null);
 
   const fetchOrders = async () => {
-    if (!isAuthenticated) {
-      setLoading(false);
-      return;
-    }
+    setLoading(true);
+    let localList = [];
     try {
-      setLoading(true);
-      const res = await api.getMyOrders();
-      if (res.success && res.data) {
-        setOrders(res.data);
+      const raw = localStorage.getItem('reserva_orders');
+      if (raw) localList = JSON.parse(raw);
+    } catch (e) {}
+
+    let backendList = [];
+    if (isAuthenticated) {
+      try {
+        const res = await api.getMyOrders();
+        if (res.success && Array.isArray(res.data)) {
+          backendList = res.data;
+        }
+      } catch (err) {
+        console.warn('Could not fetch user orders:', err);
       }
-    } catch (err) {
-      console.warn('Could not fetch user orders:', err);
-    } finally {
-      setLoading(false);
     }
+
+    const orderMap = new Map();
+    localList.forEach((o) => orderMap.set(o.orderNumber || o.id || o._id, o));
+    backendList.forEach((o) => orderMap.set(o.orderNumber || o.id || o._id, o));
+    setOrders(Array.from(orderMap.values()));
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -156,7 +165,7 @@ export default function MyTicketsView({ onExploreClick }) {
     }).format(num);
   };
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && orders.length === 0 && !loading) {
     return (
       <div className="py-20 text-center space-y-6 max-w-md mx-auto">
         <div className="w-16 h-16 rounded-full bg-iris/10 border border-iris/40 flex items-center justify-center text-iris mx-auto shadow-iris-glow">

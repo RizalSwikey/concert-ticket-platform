@@ -245,7 +245,7 @@ export default function AuthModal() {
             className="w-full py-2.5 px-4 rounded-2xl bg-void-card hover:bg-zinc-800 border border-void-border hover:border-iris/40 text-silver hover:text-bone text-xs font-mono transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
           >
             <Sparkles className="w-3.5 h-3.5 text-saffron" />
-            <span>Use Instant Demo Account (VIP Buyer)</span>
+            <span className="font-semibold text-bone">Instant Demo Buyer Login (Auto-Reserve Selected Seat)</span>
           </button>
         </div>
       </motion.div>

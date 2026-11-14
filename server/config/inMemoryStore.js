@@ -264,8 +264,9 @@ class InMemoryStore {
           seat.status === 'LOCKED' &&
           seat.lockedUntil &&
           new Date(seat.lockedUntil) < currentTime;
+        const isHeldByMe = seat.status === 'LOCKED' && seat.lockedBy === userId;
 
-        if (isAvailable || isExpired) {
+        if (isAvailable || isExpired || isHeldByMe) {
           seat.status = 'LOCKED';
           seat.lockedBy = userId;
           seat.lockedUntil = lockExpiresAt;

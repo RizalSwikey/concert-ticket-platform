@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 
 const AuthContext = createContext(null);
@@ -9,8 +9,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState('signin'); // 'signin' | 'signup'
-  const [postAuthAction, setPostAuthAction] = useState(null);
-
+  const postAuthRef = useRef(null);
   useEffect(() => {
     async function loadUser() {
       if (token) {
@@ -38,10 +37,9 @@ export function AuthProvider({ children }) {
       setToken(res.token);
       setUser(res.user);
       setIsAuthModalOpen(false);
-      if (postAuthAction) {
-        postAuthAction(res.user);
-        setPostAuthAction(null);
-      }
+      const callback = postAuthRef.current;
+      postAuthRef.current = null;
+      if (callback) callback(res.user);
       return res.user;
     }
     throw new Error(res.message || 'Login failed');
@@ -54,10 +52,9 @@ export function AuthProvider({ children }) {
       setToken(res.token);
       setUser(res.user);
       setIsAuthModalOpen(false);
-      if (postAuthAction) {
-        postAuthAction(res.user);
-        setPostAuthAction(null);
-      }
+      const callback = postAuthRef.current;
+      postAuthRef.current = null;
+      if (callback) callback(res.user);
       return res.user;
     }
     throw new Error(res.message || 'Registration failed');
@@ -71,10 +68,9 @@ export function AuthProvider({ children }) {
         setToken(res.token);
         setUser(res.user);
         setIsAuthModalOpen(false);
-        if (postAuthAction) {
-          postAuthAction(res.user);
-          setPostAuthAction(null);
-        }
+        const callback = postAuthRef.current;
+        postAuthRef.current = null;
+        if (callback) callback(res.user);
         return res.user;
       }
     } catch (err) {
@@ -85,15 +81,14 @@ export function AuthProvider({ children }) {
 
   const openAuthModal = (tab = 'signin', onAuthenticated = null) => {
     setAuthModalTab(tab);
-    if (onAuthenticated) setPostAuthAction(() => onAuthenticated);
+    postAuthRef.current = onAuthenticated;
     setIsAuthModalOpen(true);
   };
 
   const closeAuthModal = () => {
     setIsAuthModalOpen(false);
-    setPostAuthAction(null);
+    postAuthRef.current = null;
   };
-
   const logout = () => {
     localStorage.removeItem('reserva_token');
     setToken(null);

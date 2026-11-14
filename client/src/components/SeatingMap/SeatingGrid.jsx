@@ -1,21 +1,17 @@
 import React, { useState } from 'react';
 import SeatNode from './SeatNode';
-import { ZoomIn, ZoomOut, RotateCcw, MoveHorizontal, Box, LayoutGrid, Eye, Compass, Sparkles, Radio } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, MoveHorizontal, Eye, Radio, Sparkles } from 'lucide-react';
 
 export default function SeatingGrid({
   seats,
   selectedSeats,
   onToggleSeat
 }) {
-  const [viewMode, setViewMode] = useState('3D'); // '3D' | '2D'
-  const [tiltAngle, setTiltAngle] = useState(38); // 20deg to 55deg
   const [zoomLevel, setZoomLevel] = useState(1);
   const [hoveredSeat, setHoveredSeat] = useState(null);
 
-  const is3D = viewMode === '3D';
-
-  const handleZoomIn = () => setZoomLevel((z) => Math.min(z + 0.15, 1.45));
-  const handleZoomOut = () => setZoomLevel((z) => Math.max(z - 0.15, 0.75));
+  const handleZoomIn = () => setZoomLevel((z) => Math.min(z + 0.15, 1.35));
+  const handleZoomOut = () => setZoomLevel((z) => Math.max(z - 0.15, 0.8));
   const handleResetZoom = () => setZoomLevel(1);
 
   // Group seats by Tier, then Row
@@ -197,82 +193,14 @@ export default function SeatingGrid({
         )}
       </div>
 
-      {/* Viewport Toolbar: 2D/3D Switcher, Camera Tilt Angle Slider & Zoom Controls */}
-      <div className="flex flex-col lg:flex-row items-center justify-between gap-4 p-4 sm:px-6 rounded-2xl bg-void-card border border-void-border backdrop-blur-md">
-        {/* Left: View Mode Toggle (3D Arena View vs 2D Flat View) */}
-        <div className="flex items-center space-x-2 bg-void-surface border border-void-border rounded-full p-1 text-xs font-mono">
-          <button
-            type="button"
-            onClick={() => setViewMode('3D')}
-            className={`flex items-center space-x-1.5 px-4 py-1.5 rounded-full transition-all cursor-pointer ${
-              viewMode === '3D'
-                ? 'bg-iris text-white shadow-iris-glow font-semibold'
-                : 'text-silver hover:text-bone hover:bg-void-card'
-            }`}
-          >
-            <Box className="w-3.5 h-3.5" />
-            <span>3D Arena View</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setViewMode('2D')}
-            className={`flex items-center space-x-1.5 px-4 py-1.5 rounded-full transition-all cursor-pointer ${
-              viewMode === '2D'
-                ? 'bg-iris text-white shadow-iris-glow font-semibold'
-                : 'text-silver hover:text-bone hover:bg-void-card'
-            }`}
-          >
-            <LayoutGrid className="w-3.5 h-3.5" />
-            <span>2D Flat View</span>
-          </button>
+      {/* Viewport Toolbar: Zoom Controls & Mobile Swipe Hint */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 sm:px-6 rounded-2xl bg-void-card border border-void-border backdrop-blur-md">
+        <div className="flex items-center space-x-2 text-xs font-mono text-silver">
+          <MoveHorizontal className="w-4 h-4 text-iris animate-pulse shrink-0" />
+          <span>Crisp Amphitheater Map • Click any seat to reserve (Max 4 seats)</span>
         </div>
 
-        {/* Center: Camera Tilt Angle Slider (Only visible in 3D Mode) */}
-        {is3D && (
-          <div className="flex items-center space-x-3 bg-void-surface border border-void-border rounded-full px-4 py-1.5 text-xs font-mono">
-            <span className="text-silver whitespace-nowrap flex items-center space-x-1">
-              <Compass className="w-3.5 h-3.5 text-iris" />
-              <span>Camera Tilt:</span>
-            </span>
-            <input
-              type="range"
-              min="20"
-              max="55"
-              value={tiltAngle}
-              onChange={(e) => setTiltAngle(Number(e.target.value))}
-              className="w-24 sm:w-32 accent-iris cursor-pointer"
-              aria-label="Camera Tilt Angle"
-            />
-            <span className="text-bone font-semibold w-8 text-right">
-              {tiltAngle}°
-            </span>
-
-            {/* Tilt Angle Presets */}
-            <div className="hidden sm:flex items-center space-x-1 pl-1 border-l border-void-border">
-              {[
-                { label: '28°', val: 28 },
-                { label: '38°', val: 38 },
-                { label: '48°', val: 48 }
-              ].map((p) => (
-                <button
-                  key={p.val}
-                  type="button"
-                  onClick={() => setTiltAngle(p.val)}
-                  className={`px-1.5 py-0.5 rounded text-[10px] cursor-pointer ${
-                    tiltAngle === p.val
-                      ? 'bg-iris/25 text-iris font-bold'
-                      : 'text-silver hover:text-bone'
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Right: Zoom Controls */}
+        {/* Zoom Controls */}
         <div className="flex items-center space-x-2 bg-void-surface border border-void-border rounded-full p-1 text-xs font-mono">
           <button
             type="button"
@@ -315,46 +243,16 @@ export default function SeatingGrid({
         </div>
       </div>
 
-      {/* 3D Perspective Stage Container */}
-      <div className={`overflow-x-auto pb-10 scrollbar-thin scrollbar-thumb-iris/40 ${is3D ? 'perspective-1200' : ''}`}>
+      {/* Unified Amphitheater Canvas (Single crisp container, zero rotateX, zero nested vertical scrollbars) */}
+      <div className="overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-iris/40">
         <div
           style={{
-            transform: is3D
-              ? `perspective(1200px) rotateX(${tiltAngle}deg) scale(${zoomLevel})`
-              : `scale(${zoomLevel})`,
+            transform: `scale(${zoomLevel})`,
             transformOrigin: 'top center',
-            transition: 'transform 0.35s cubic-bezier(0.2, 0, 0, 1)'
+            transition: 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)'
           }}
-          className={`space-y-10 min-w-[780px] sm:min-w-[860px] mx-auto py-4 ${is3D ? 'preserve-3d' : ''}`}
+          className="space-y-8 min-w-[760px] sm:min-w-[840px] max-w-5xl mx-auto py-2"
         >
-          {/* 3D Main Stage Wall inside 3D arena standing upright (rotateX: -70deg) */}
-          {is3D && (
-            <div
-              style={{
-                transform: 'rotateX(-70deg) translateZ(20px)',
-                transformOrigin: 'bottom center'
-              }}
-              className="w-full max-w-2xl mx-auto mb-6 text-center preserve-3d"
-            >
-              <div className="h-20 w-full rounded-2xl border-2 border-iris/80 bg-gradient-to-b from-void-surface via-zinc-900 to-void-card shadow-ambient-stage relative overflow-hidden flex flex-col items-center justify-center p-3 backdrop-blur-xl">
-                {/* Moving Spotlights Visualization */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                  <div className="absolute top-0 left-1/4 w-12 h-36 bg-gradient-to-b from-iris/60 to-transparent animate-laser-sweep-1" />
-                  <div className="absolute top-0 right-1/4 w-12 h-36 bg-gradient-to-b from-emerald-400/50 to-transparent animate-laser-sweep-2" />
-                </div>
-
-                <div className="flex items-center space-x-2 text-xs font-mono tracking-widest uppercase text-bone z-10 font-bold">
-                  <Radio className="w-3.5 h-3.5 text-iris animate-pulse" />
-                  <span>3D ARENA MAIN STAGE • DIRECT ACOUSTIC APEX</span>
-                  <Sparkles className="w-3.5 h-3.5 text-saffron" />
-                </div>
-                <span className="text-[10px] font-mono text-silver tracking-wider uppercase mt-1 z-10">
-                  Camera Isometric Frustum Tilt: {tiltAngle}°
-                </span>
-              </div>
-            </div>
-          )}
-
           {tiers.map((tierName) => {
             const rows = seatsByTier[tierName] || {};
             const rowKeys = Object.keys(rows).sort();
@@ -371,9 +269,7 @@ export default function SeatingGrid({
             return (
               <div
                 key={tierName}
-                className={`p-5 sm:p-7 rounded-3xl bg-void-card border border-void-border backdrop-blur-sm ${
-                  is3D ? 'preserve-3d shadow-xl' : ''
-                }`}
+                className="p-5 sm:p-7 rounded-3xl bg-void-card border border-void-border backdrop-blur-sm shadow-md"
               >
                 {/* Tier Section Header */}
                 <div className="flex items-center justify-between mb-5 pb-3 border-b border-void-border">
@@ -395,15 +291,13 @@ export default function SeatingGrid({
                 </div>
 
                 {/* Seat Rows Grid */}
-                <div className={`space-y-3 ${is3D ? 'preserve-3d' : ''}`}>
+                <div className="space-y-3">
                   {rowKeys.map((rowKey) => {
                     const rowSeats = rows[rowKey].sort((a, b) => a.number - b.number);
                     return (
                       <div
                         key={rowKey}
-                        className={`flex items-center justify-center space-x-2 sm:space-x-3 ${
-                          is3D ? 'preserve-3d' : ''
-                        }`}
+                        className="flex items-center justify-center space-x-2 sm:space-x-3"
                       >
                         {/* Row Indicator Left */}
                         <span className="w-7 text-center font-mono text-xs text-silver font-semibold">
@@ -411,33 +305,31 @@ export default function SeatingGrid({
                         </span>
 
                         {/* Left Aisle Group (seats 1-10) */}
-                        <div className={`flex items-center space-x-1.5 sm:space-x-2 ${is3D ? 'preserve-3d' : ''}`}>
+                        <div className="flex items-center space-x-1.5 sm:space-x-2">
                           {rowSeats.slice(0, 10).map((seat) => (
                             <SeatNode
                               key={seat._id}
                               seat={seat}
                               isSelected={selectedSeats.some((s) => s._id === seat._id)}
                               onToggle={onToggleSeat}
-                              is3D={is3D}
                               onHover={setHoveredSeat}
                             />
                           ))}
                         </div>
 
                         {/* Center Walking Aisle Gap */}
-                        <div className="w-6 sm:w-10 h-6 border-b border-dashed border-void-border flex items-center justify-center">
-                          <span className="text-[8px] font-mono text-silver">AISLE</span>
+                        <div className="w-8 sm:w-12 h-8 border-b border-dashed border-void-border flex items-center justify-center">
+                          <span className="text-[9px] font-mono text-silver">AISLE</span>
                         </div>
 
                         {/* Right Aisle Group (seats 11-20) */}
-                        <div className={`flex items-center space-x-1.5 sm:space-x-2 ${is3D ? 'preserve-3d' : ''}`}>
+                        <div className="flex items-center space-x-1.5 sm:space-x-2">
                           {rowSeats.slice(10, 20).map((seat) => (
                             <SeatNode
                               key={seat._id}
                               seat={seat}
                               isSelected={selectedSeats.some((s) => s._id === seat._id)}
                               onToggle={onToggleSeat}
-                              is3D={is3D}
                               onHover={setHoveredSeat}
                             />
                           ))}

@@ -9,7 +9,8 @@ async function lockSingleSeat(seatId, userId, lockExpiresAt, currentTime) {
       _id: seatId,
       $or: [
         { status: 'AVAILABLE' },
-        { status: 'LOCKED', lockedUntil: { $lt: currentTime } }
+        { status: 'LOCKED', lockedUntil: { $lt: currentTime } },
+        { status: 'LOCKED', lockedBy: userId }
       ]
     },
     {
