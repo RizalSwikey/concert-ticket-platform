@@ -10,7 +10,7 @@
     "build:client": "npm --prefix client install && npm --prefix client run build",
     "build": "npm --prefix client install && npm --prefix client run build",
     "seed": "node server/scripts/seedLocal.js",
-    "test": "node test/atomicLock.test.js",
+    "test": "node test/atomicLock.test.js && node test/checkout.test.js",
     "start": "node server/server.js"
   },
   "dependencies": {
