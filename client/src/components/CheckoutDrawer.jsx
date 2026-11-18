@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -20,14 +20,14 @@ export default function CheckoutDrawer({
   expiresInSeconds,
   onCheckoutSuccess
 }) {
-  const { user, openAuthModal, isAuthenticated } = useAuth();
+  const { openAuthModal, isAuthenticated } = useAuth();
   const { addToast } = useToast();
   const [timeLeft, setTimeLeft] = useState(expiresInSeconds || 600);
   const [selectedPayment, setSelectedPayment] = useState('MOCK_QRIS');
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const reduce = useReducedMotion();
 
-  // Countdown timer synced with lock duration
   useEffect(() => {
     setTimeLeft(expiresInSeconds || 600);
   }, [expiresInSeconds]);
@@ -35,13 +35,7 @@ export default function CheckoutDrawer({
   useEffect(() => {
     if (!isOpen || timeLeft <= 0) return;
     const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
+      setTimeLeft((prev) => (prev <= 1 ? 0 : prev - 1));
     }, 1000);
     return () => clearInterval(interval);
   }, [isOpen, timeLeft]);
@@ -49,20 +43,17 @@ export default function CheckoutDrawer({
   const formatTimer = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  const formatIDR = (num) => {
-    return new Intl.NumberFormat('id-ID', {
+  const formatIDR = (num) =>
+    new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
       maximumFractionDigits: 0
     }).format(num);
-  };
 
   const subtotal = lockedSeats.reduce((sum, s) => sum + s.price, 0);
-  const adminFee = 0;
-  const grandTotal = subtotal + adminFee;
 
   const handleConfirmPay = async () => {
     if (submitting) return;
@@ -87,13 +78,13 @@ export default function CheckoutDrawer({
           particleCount: 90,
           spread: 75,
           origin: { y: 0.6 },
-          colors: ['#8052ff', '#15846e', '#ffb829']
+          colors: ['#8052ff', '#15846e', '#ffb829', '#ffffff']
         });
 
         addToast({
           type: 'success',
-          title: 'Passes Issued Successfully',
-          message: `Order #${res.order.orderNumber} confirmed! E-Ticket issued with QR code.`
+          title: 'Passes issued',
+          message: `Order #${res.order.orderNumber} confirmed. E-ticket issued with QR code.`
         });
 
         onCheckoutSuccess(res.order);
@@ -102,8 +93,8 @@ export default function CheckoutDrawer({
       setErrorMsg(err.message || 'Checkout failed. Lock may have expired.');
       addToast({
         type: 'error',
-        title: 'Checkout Failed',
-        message: err.message || 'Seats lock expired.'
+        title: 'Checkout failed',
+        message: err.message || 'Seat lock expired.'
       });
     } finally {
       setSubmitting(false);
@@ -114,175 +105,151 @@ export default function CheckoutDrawer({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-end md:items-stretch justify-center md:justify-end">
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-void/80 backdrop-blur-md transition-opacity"
+            className="fixed inset-0 bg-void/85"
             onClick={onClose}
           />
 
-          {/* Drawer / Mobile Bottom Sheet Panel */}
           <motion.div
-            initial={{ y: 50, opacity: 0 }}
+            initial={reduce ? false : { y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 50, opacity: 0 }}
-            transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-            className="relative w-full max-w-md bg-void-surface border-t md:border-t-0 md:border-l border-void-border p-5 sm:p-8 rounded-t-3xl md:rounded-t-none md:rounded-l-3xl backdrop-blur-2xl shadow-2xl flex flex-col justify-between max-h-[88vh] md:max-h-full overflow-y-auto z-10"
+            exit={reduce ? { opacity: 0 } : { y: 40, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            role="dialog"
+            aria-label="Checkout"
+            className="relative w-full max-w-md bg-void border-t md:border-t-0 md:border-l border-void-border flex flex-col justify-between max-h-[90vh] md:max-h-full overflow-y-auto z-10"
           >
-            {/* Top Bar: Header & Countdown */}
-            <div>
-              {/* Mobile Drag Indicator Bar */}
-              <div className="md:hidden w-12 h-1 rounded-full bg-void-border mx-auto mb-3" />
-
-              <div className="flex items-center justify-between pb-4 sm:pb-6 border-b border-void-border">
-                <div>
-                  <span className="text-[10px] font-mono tracking-wider text-iris uppercase font-semibold">
-                    RESERVATION CHECKOUT
-                  </span>
-                  <h2 className="text-lg sm:text-xl font-normal tracking-tight text-bone">
-                    Review & Confirm Seats
+            <div className="p-5 sm:p-8 space-y-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <span className="label-mono text-ash">Reservation checkout</span>
+                  <h2 className="text-xl text-bone" style={{ fontWeight: 500, letterSpacing: '-0.03em' }}>
+                    Review &amp; confirm
                   </h2>
                 </div>
                 <button
+                  type="button"
                   onClick={onClose}
-                  className="p-2 rounded-full hover:bg-void-card text-silver hover:text-bone transition-colors"
-                  aria-label="Close checkout drawer"
+                  aria-label="Close checkout"
+                  className="p-1.5 text-ash hover:text-bone transition-colors cursor-pointer"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Saffron Countdown Alert */}
-              <div className="my-4 sm:my-6 p-3.5 sm:p-4 rounded-2xl bg-saffron/10 border border-saffron/30 flex items-center justify-between">
-                <div className="flex items-center space-x-2.5">
-                  <Clock className="w-4 h-4 text-saffron animate-spin shrink-0" />
-                  <div className="text-xs">
-                    <span className="text-bone font-medium">Seats Held Exclusively</span>
-                    <p className="text-[10px] text-silver font-light">
-                      Time remaining to complete payment
-                    </p>
-                  </div>
-                </div>
+              {/* Countdown: one saffron line */}
+              <div className="flex items-center justify-between border-y border-void-border py-3">
+                <span className="label-mono text-ash flex items-center gap-2">
+                  <Clock className={`w-3.5 h-3.5 ${reduce ? '' : 'animate-pulse'}`} />
+                  Seats held
+                </span>
                 <span
-                  className={`font-mono text-base font-bold shrink-0 ${
-                    timeLeft < 60 ? 'text-red-400 animate-pulse' : 'text-saffron'
+                  className={`font-mono text-base tabular-nums ${
+                    timeLeft < 60 ? 'text-saffron' : 'text-bone'
                   }`}
                 >
                   {formatTimer(timeLeft)}
                 </span>
               </div>
 
-              {/* Concert Info */}
-              <div className="space-y-0.5 mb-5">
-                <h4 className="text-sm font-medium text-bone">{concert.title}</h4>
-                <p className="text-xs text-silver font-light">{concert.venue}</p>
+              <div className="space-y-1">
+                <h3 className="text-sm text-bone">{concert.title}</h3>
+                <p className="label-mono text-ash">{concert.venue}</p>
               </div>
 
-              {/* Selected Seats Breakdown */}
-              <div className="space-y-2.5 mb-5">
-                <span className="text-[11px] font-mono uppercase text-silver tracking-wider">
-                  Allocated Seats ({lockedSeats.length})
+              {/* Seats: mono chips */}
+              <div className="space-y-2">
+                <span className="label-mono text-ash">
+                  Allocated seats ({lockedSeats.length})
                 </span>
-                <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-36 overflow-y-auto">
                   {lockedSeats.map((seat) => (
                     <div
                       key={seat._id}
-                      className="flex items-center justify-between p-3 rounded-2xl bg-void-card border border-void-border text-xs font-mono"
+                      className="flex items-center justify-between font-mono text-xs border-b border-void-border pb-2 last:border-0"
                     >
-                      <div className="flex items-center space-x-2">
-                        <span className="w-2 h-2 rounded-full bg-iris" />
-                        <span className="text-bone font-medium">{seat.seatNumber}</span>
-                        <span className="text-silver text-[11px]">({seat.tier})</span>
-                      </div>
+                      <span className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-iris text-white text-[11px]">
+                          {seat.seatNumber}
+                        </span>
+                        <span className="text-ash">{seat.tier}</span>
+                      </span>
                       <span className="text-bone">{formatIDR(seat.price)}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Payment Method Selector */}
-              <div className="space-y-2.5 mb-5">
-                <span className="text-[11px] font-mono uppercase text-silver tracking-wider block">
-                  Select Payment Method
-                </span>
-                <div className="space-y-2">
-                  {PAYMENT_METHODS.map((pm) => {
-                    const Icon = pm.icon;
-                    const isSelected = selectedPayment === pm.id;
-                    return (
-                      <div
-                        key={pm.id}
-                        onClick={() => setSelectedPayment(pm.id)}
-                        className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between text-xs font-mono ${
-                          isSelected
-                            ? 'bg-void-card border-iris shadow-sm text-bone'
-                            : 'bg-void-card/60 border-void-border text-silver hover:border-void-border'
+              {/* Payment methods: hairline rows, no fill */}
+              <div className="space-y-2">
+                <span className="label-mono text-ash">Payment method</span>
+                {PAYMENT_METHODS.map((pm) => {
+                  const Icon = pm.icon;
+                  const isSelected = selectedPayment === pm.id;
+                  return (
+                    <button
+                      key={pm.id}
+                      type="button"
+                      onClick={() => setSelectedPayment(pm.id)}
+                      aria-pressed={isSelected}
+                      className={`w-full flex items-center justify-between gap-3 py-3 px-3 rounded-lg border text-left transition-colors cursor-pointer ${
+                        isSelected ? 'border-iris' : 'border-void-border hover:border-iris/40'
+                      }`}
+                    >
+                      <span className="flex items-center gap-3 min-w-0">
+                        <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-iris' : 'text-ash'}`} />
+                        <span className="min-w-0">
+                          <span className="block font-mono text-xs text-bone">{pm.name}</span>
+                          <span className="block text-[11px] font-light text-ash truncate">
+                            {pm.subtext}
+                          </span>
+                        </span>
+                      </span>
+                      <span
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                          isSelected ? 'border-iris bg-iris text-white' : 'border-void-border'
                         }`}
                       >
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isSelected ? 'bg-iris/20 text-iris' : 'bg-void-surface text-silver'}`}>
-                            <Icon className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <p className="text-bone font-medium">{pm.name}</p>
-                            <p className="text-[10px] text-silver font-light">{pm.subtext}</p>
-                          </div>
-                        </div>
-
-                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
-                          isSelected ? 'border-iris bg-iris text-white' : 'border-void-border'
-                        }`}>
-                          {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                        {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Bottom Total & Primary Action Button */}
-            <div className="pt-4 sm:pt-6 border-t border-void-border space-y-3.5">
+            {/* Sticky summary band */}
+            <div className="sticky bottom-0 bg-void border-t border-void-border p-5 sm:px-8 space-y-3">
               {errorMsg && (
-                <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-400 text-xs flex items-center space-x-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{errorMsg}</span>
-                </div>
+                <p className="flex items-center gap-2 text-[11px] font-mono text-saffron">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  {errorMsg}
+                </p>
               )}
 
-              <div className="space-y-1.5 text-xs font-mono">
-                <div className="flex justify-between text-silver">
-                  <span>Subtotal:</span>
-                  <span>{formatIDR(subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-silver">
-                  <span>Convenience Fee:</span>
-                  <span className="text-verdant">IDR 0 (Waived)</span>
-                </div>
-                <div className="flex justify-between text-sm font-semibold text-bone pt-2 border-t border-void-border">
-                  <span>Grand Total:</span>
-                  <span className="text-iris font-mono">{formatIDR(grandTotal)}</span>
-                </div>
+              <div className="flex items-baseline justify-between">
+                <span className="label-mono text-ash">Total</span>
+                <span className="font-mono text-lg text-bone">{formatIDR(subtotal)}</span>
               </div>
 
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+              <button
+                type="button"
                 onClick={handleConfirmPay}
                 disabled={submitting || timeLeft <= 0 || lockedSeats.length === 0}
-                className="w-full py-3.5 sm:py-4 rounded-full bg-iris hover:bg-iris-hover text-white text-xs font-semibold tracking-wide uppercase shadow-iris-glow hover:shadow-iris transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center space-x-2"
+                className="w-full py-3.5 rounded-full bg-iris hover:bg-iris-hover text-white label-mono font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <ShieldCheck className="w-4 h-4" />
                 <span>
                   {submitting
-                    ? 'Processing Payment...'
+                    ? 'Processing'
                     : timeLeft <= 0
-                    ? 'Lock Expired'
-                    : `Confirm & Pay ${formatIDR(grandTotal)}`}
+                    ? 'Lock expired'
+                    : `Pay ${formatIDR(subtotal)}`}
                 </span>
-              </motion.button>
+              </button>
             </div>
           </motion.div>
         </div>

@@ -1,31 +1,32 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
-import { Zap, Ticket, Compass, MapPin, User, LogOut, ChevronDown, Sparkles, Sun, Moon, Terminal } from 'lucide-react';
+import { ChevronDown, Sun, Moon, Terminal } from 'lucide-react';
+
+const TABS = [
+  { id: 'discover', label: 'Shows' },
+  { id: 'venues', label: 'Venues' },
+  { id: 'tickets', label: 'My Tickets' }
+];
 
 export default function Navbar({ activeTab, onTabChange, myTicketsCount = 0, onOpenInspector }) {
   const { user, isAuthenticated, openAuthModal, logout } = useAuth();
-  const { theme, toggleTheme, isDark } = useTheme();
+  const { toggleTheme, isDark } = useTheme();
   const { addToast } = useToast();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const reduce = useReducedMotion();
 
   const handleLogout = () => {
     logout();
     setDropdownOpen(false);
-    addToast({
-      type: 'info',
-      title: 'Signed Out',
-      message: 'You have been safely signed out.'
-    });
+    addToast({ type: 'info', title: 'Signed Out', message: 'You have been safely signed out.' });
   };
 
   const handleNavClick = (tab) => {
     if (tab === 'tickets' && !isAuthenticated) {
-      openAuthModal('signin', () => {
-        onTabChange('tickets');
-      });
+      openAuthModal('signin', () => onTabChange('tickets'));
       return;
     }
     onTabChange(tab);
@@ -33,220 +34,157 @@ export default function Navbar({ activeTab, onTabChange, myTicketsCount = 0, onO
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full bg-void-surface/90 border-b border-void-border backdrop-blur-2xl transition-colors">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
-          {/* Brand Logo */}
-          <div
+      <header className="sticky top-0 z-40 w-full bg-void border-b border-void-border">
+        <div className="max-w-page mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
+          {/* Wordmark */}
+          <button
+            type="button"
             onClick={() => onTabChange('discover')}
-            className="flex items-center space-x-2.5 sm:space-x-3 cursor-pointer group"
+            className="text-lg sm:text-xl tracking-tighter text-bone shrink-0"
+            style={{ fontWeight: 500, letterSpacing: '-0.045em' }}
           >
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-iris/10 border border-iris/40 flex items-center justify-center text-iris shadow-iris-glow relative shrink-0">
-              <Zap className="w-4 h-4 sm:w-5 sm:h-5 fill-iris text-iris transition-transform group-hover:scale-110" />
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-verdant border-2 border-void animate-pulse" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-1.5 sm:space-x-2">
-                <span className="font-sans text-lg sm:text-xl font-medium tracking-tight text-bone group-hover:text-iris transition-colors">
-                  RESERVA
-                </span>
-                <span className="text-[9px] sm:text-[10px] font-mono px-1.5 sm:px-2 py-0.5 rounded-full bg-iris/15 text-iris border border-iris/30 font-semibold tracking-wider uppercase">
-                  LIVE
-                </span>
-              </div>
-              <p className="hidden sm:block text-[10px] text-silver tracking-wide font-mono">
-                Official Concert & Seat Platform
-              </p>
-            </div>
-          </div>
+            RESERVA
+          </button>
 
-          {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center space-x-1 p-1 rounded-full bg-void-card border border-void-border backdrop-blur-md">
-            <button
-              onClick={() => handleNavClick('discover')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-full text-xs font-mono transition-all cursor-pointer ${
-                activeTab === 'discover'
-                  ? 'bg-void-surface text-bone shadow-sm border border-void-border font-semibold'
-                  : 'text-silver hover:text-bone hover:bg-white/5'
-              }`}
-            >
-              <Compass className="w-3.5 h-3.5 text-iris" />
-              <span>Discover Shows</span>
-            </button>
-
-            <button
-              onClick={() => handleNavClick('venues')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-full text-xs font-mono transition-all cursor-pointer ${
-                activeTab === 'venues'
-                  ? 'bg-void-surface text-bone shadow-sm border border-void-border font-semibold'
-                  : 'text-silver hover:text-bone hover:bg-white/5'
-              }`}
-            >
-              <MapPin className="w-3.5 h-3.5 text-verdant" />
-              <span>Venues</span>
-            </button>
-
-            <button
-              onClick={() => handleNavClick('tickets')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-full text-xs font-mono transition-all cursor-pointer relative ${
-                activeTab === 'tickets'
-                  ? 'bg-void-surface text-bone shadow-sm border border-void-border font-semibold'
-                  : 'text-silver hover:text-bone hover:bg-white/5'
-              }`}
-            >
-              <Ticket className="w-3.5 h-3.5 text-saffron" />
-              <span>My Tickets</span>
-              {myTicketsCount > 0 && (
-                <span className="w-4 h-4 rounded-full bg-iris text-white text-[9px] font-bold flex items-center justify-center">
-                  {myTicketsCount}
-                </span>
-              )}
-            </button>
+          {/* Desktop nav: mono uppercase, underline on active */}
+          <nav className="hidden md:flex items-center gap-7">
+            {TABS.map((tab) => {
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => handleNavClick(tab.id)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`relative pb-1 label-mono transition-colors cursor-pointer ${
+                    active ? 'text-bone' : 'text-ash hover:text-bone'
+                  }`}
+                >
+                  {tab.label}
+                  {tab.id === 'tickets' && myTicketsCount > 0 && (
+                    <span className="ml-1.5 text-iris">({myTicketsCount})</span>
+                  )}
+                  <span
+                    className={`absolute left-0 -bottom-px h-px bg-iris transition-[width] duration-300 ${
+                      active ? 'w-full' : 'w-0'
+                    }`}
+                  />
+                </button>
+              );
+            })}
           </nav>
 
-          {/* Right Controls: Theme Toggle + User Account */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            {/* Theme Toggle (Sun/Moon) */}
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={toggleTheme}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-void-card hover:bg-void-elevated border border-void-border flex items-center justify-center text-silver hover:text-bone transition-colors cursor-pointer"
-              title={`Switch to ${isDark ? 'Archival Light Mode' : 'Dark Void Mode'}`}
-              aria-label="Toggle visual theme"
-            >
-              {isDark ? (
-                <Sun className="w-4 h-4 text-saffron transition-transform hover:rotate-45" />
-              ) : (
-                <Moon className="w-4 h-4 text-iris transition-transform hover:-rotate-12" />
-              )}
-            </motion.button>
+          <div className="flex items-center gap-2 sm:gap-4">
+            {onOpenInspector && (
+              <button
+                type="button"
+                onClick={onOpenInspector}
+                aria-label="Open engine inspector"
+                className="hidden sm:flex p-2 text-ash hover:text-bone transition-colors cursor-pointer"
+              >
+                <Terminal className="w-4 h-4" />
+              </button>
+            )}
 
-            {/* Auth / Profile */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={`Switch to ${isDark ? 'light' : 'dark'} theme`}
+              className="p-2 text-ash hover:text-bone transition-colors cursor-pointer"
+            >
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+
             {isAuthenticated ? (
               <div className="relative">
                 <button
+                  type="button"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center space-x-2 bg-void-card hover:bg-void-surface border border-void-border hover:border-iris/40 rounded-full pl-1.5 sm:pl-2 pr-2.5 sm:pr-3 py-1 sm:py-1.5 transition-all text-xs text-bone font-mono cursor-pointer"
+                  className="flex items-center gap-2 label-mono text-bone cursor-pointer"
                 >
-                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-iris/20 border border-iris/40 flex items-center justify-center text-iris font-bold text-xs">
-                    {user.name.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="hidden sm:inline max-w-[100px] truncate">{user.name.split(' ')[0]}</span>
-                  <ChevronDown className="w-3 h-3 text-silver" />
+                  <span className="truncate max-w-[90px]">{user.name.split(' ')[0]}</span>
+                  <ChevronDown className="w-3 h-3 text-ash" />
                 </button>
 
-                {/* Dropdown Menu */}
                 <AnimatePresence>
                   {dropdownOpen && (
                     <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute right-0 mt-2 w-56 rounded-2xl bg-void-surface border border-void-border shadow-2xl p-2 z-50 text-xs font-mono backdrop-blur-2xl"
+                      initial={reduce ? false : { opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={reduce ? { opacity: 0 } : { opacity: 0, y: -6 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-3 w-56 rounded-lg bg-void-surface border border-void-border p-4 space-y-3 text-xs font-mono"
                     >
-                      <div className="p-3 border-b border-void-border space-y-0.5">
-                        <p className="text-bone font-medium truncate">{user.name}</p>
-                        <p className="text-[11px] text-silver truncate">{user.email}</p>
-                        <span className="inline-block mt-1 text-[10px] text-saffron bg-saffron/10 px-2 py-0.5 rounded-full border border-saffron/20">
-                          Balance: Rp 50,000,000
-                        </span>
+                      <div className="space-y-0.5 pb-3 border-b border-void-border">
+                        <p className="text-bone truncate">{user.name}</p>
+                        <p className="text-[11px] text-ash truncate">{user.email}</p>
+                        <p className="text-[11px] text-saffron pt-1">Balance: Rp 50,000,000</p>
                       </div>
-
-                      <div className="py-1">
-                        <button
-                          onClick={() => {
-                            setDropdownOpen(false);
-                            onTabChange('tickets');
-                          }}
-                          className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-silver hover:text-bone hover:bg-void-card transition-colors text-left"
-                        >
-                          <Ticket className="w-3.5 h-3.5 text-saffron" />
-                          <span>My Ticket Wallet</span>
-                        </button>
-                      </div>
-
-                      <div className="pt-1 border-t border-void-border">
-                        <button
-                          onClick={handleLogout}
-                          className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-red-500 hover:bg-red-500/10 transition-colors text-left"
-                        >
-                          <LogOut className="w-3.5 h-3.5" />
-                          <span>Sign Out</span>
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDropdownOpen(false);
+                          handleNavClick('tickets');
+                        }}
+                        className="block w-full text-left label-mono text-ash hover:text-bone transition-colors cursor-pointer"
+                      >
+                        Ticket Wallet
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="block w-full text-left label-mono text-ash hover:text-saffron transition-colors cursor-pointer"
+                      >
+                        Sign Out
+                      </button>
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
             ) : (
-              <div className="flex items-center space-x-1.5 sm:space-x-2">
+              <>
                 <button
+                  type="button"
                   onClick={() => openAuthModal('signin')}
-                  className="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-mono text-silver hover:text-bone hover:bg-void-card transition-all cursor-pointer"
+                  className="label-mono text-ash hover:text-bone transition-colors cursor-pointer"
                 >
                   Sign In
                 </button>
                 <button
+                  type="button"
                   onClick={() => openAuthModal('signup')}
-                  className="flex items-center space-x-1 sm:space-x-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-semibold tracking-wide bg-iris hover:bg-iris-hover text-white shadow-iris-glow transition-all cursor-pointer"
+                  className="rounded-full px-5 py-2 bg-iris hover:bg-iris-hover text-white label-mono font-semibold transition-colors cursor-pointer"
                 >
-                  <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  <span>Join</span>
+                  Join
                 </button>
-              </div>
+              </>
             )}
           </div>
         </div>
       </header>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR (< 768px) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-void-surface/95 border-t border-void-border backdrop-blur-2xl px-2 py-2 flex items-center justify-around text-[10px] font-mono">
-        <button
-          onClick={() => handleNavClick('discover')}
-          className={`flex flex-col items-center space-y-1 py-1 px-3 rounded-xl transition-colors cursor-pointer ${
-            activeTab === 'discover' ? 'text-iris font-semibold' : 'text-silver hover:text-bone'
-          }`}
-        >
-          <Compass className="w-4 h-4" />
-          <span>Shows</span>
-        </button>
-
-        <button
-          onClick={() => handleNavClick('venues')}
-          className={`flex flex-col items-center space-y-1 py-1 px-3 rounded-xl transition-colors cursor-pointer ${
-            activeTab === 'venues' ? 'text-verdant font-semibold' : 'text-silver hover:text-bone'
-          }`}
-        >
-          <MapPin className="w-4 h-4" />
-          <span>Venues</span>
-        </button>
-
-        <button
-          onClick={() => handleNavClick('tickets')}
-          className={`flex flex-col items-center space-y-1 py-1 px-3 rounded-xl transition-colors relative cursor-pointer ${
-            activeTab === 'tickets' ? 'text-saffron font-semibold' : 'text-silver hover:text-bone'
-          }`}
-        >
-          <div className="relative">
-            <Ticket className="w-4 h-4" />
-            {myTicketsCount > 0 && (
-              <span className="absolute -top-1.5 -right-2 w-3.5 h-3.5 rounded-full bg-iris text-white text-[8px] font-bold flex items-center justify-center">
-                {myTicketsCount}
-              </span>
-            )}
-          </div>
-          <span>Tickets</span>
-        </button>
-
-        {onOpenInspector && (
-          <button
-            onClick={onOpenInspector}
-            className="flex flex-col items-center space-y-1 py-1 px-3 rounded-xl text-silver hover:text-bone transition-colors cursor-pointer"
-          >
-            <Terminal className="w-4 h-4 text-iris" />
-            <span>&lt;/&gt; Lab</span>
-          </button>
-        )}
-      </div>
+      {/* Mobile bottom bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-void border-t border-void-border flex items-center justify-around px-2 py-2">
+        {TABS.map((tab) => {
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => handleNavClick(tab.id)}
+              aria-current={active ? 'page' : undefined}
+              className={`label-mono px-3 py-2 transition-colors cursor-pointer ${
+                active ? 'text-bone' : 'text-ash'
+              }`}
+            >
+              {tab.label}
+              {tab.id === 'tickets' && myTicketsCount > 0 && (
+                <span className="ml-1 text-iris">({myTicketsCount})</span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
     </>
   );
 }

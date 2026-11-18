@@ -16,7 +16,7 @@ import VenuesView from './components/VenuesView';
 import AuthModal from './components/AuthModal';
 import EngineInspectorModal from './components/EngineInspectorModal';
 import Footer from './components/Footer';
-import { ShoppingCart, RefreshCw, Search, Sparkles, Terminal, SlidersHorizontal, Clock, ArrowRight } from 'lucide-react';
+import { ShoppingCart, RefreshCw, Search, Terminal, Clock, ArrowRight } from 'lucide-react';
 
 const CATEGORIES = [
   'All Events',
@@ -323,74 +323,78 @@ export default function App() {
       />
 
       {/* Main View Router */}
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8 w-full">
+      <main className="flex-1 w-full max-w-page mx-auto px-4 sm:px-6 lg:px-8 pb-24 md:pb-8">
         {activeTab === 'discover' && (
-          <div className="space-y-16">
+          <div className="space-y-24">
             {/* Commercial Hero */}
             <Hero onExploreClick={scrollToShows} />
 
             {/* Concerts Discovery Header, Search & Category Filters */}
-            <section ref={showsSectionRef} className="space-y-6 pt-4">
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div>
-                  <span className="text-xs font-mono uppercase tracking-widest text-iris font-semibold">
-                    DISCOVER CONCERTS
-                  </span>
-                  <h2 className="text-3xl sm:text-4xl font-normal tracking-tight text-bone mt-1">
-                    Featured Stadium Shows
-                  </h2>
-                </div>
+            <section ref={showsSectionRef} className="space-y-8 pt-4">
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <h2 className="display-lg text-bone">
+                  FEATURED
+                  <br />
+                  STADIUM SHOWS
+                </h2>
 
-                {/* Search Bar */}
-                <div className="relative w-full md:w-80 flex items-center">
-                  <Search className="w-4 h-4 text-ash absolute left-3.5 pointer-events-none" />
+                {/* Flat bottom-bordered search line */}
+                <div className="flex items-center gap-2 w-full md:w-80 border-b border-void-border focus-within:border-iris transition-colors pb-2">
+                  <Search className="w-4 h-4 text-ash shrink-0" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search artist, tour, or venue..."
-                    className="w-full bg-void-surface border border-void-border rounded-full pl-10 pr-4 py-2.5 text-xs text-bone placeholder:text-zinc-600 focus:outline-none focus:border-iris transition-all font-sans"
+                    placeholder="Search artist, tour, or venue"
+                    aria-label="Search concerts"
+                    className="w-full bg-transparent text-sm text-bone placeholder:text-tertiary focus:outline-none font-sans"
                   />
                 </div>
               </div>
 
-              {/* Category Pills */}
-              <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-4 py-2 rounded-full text-xs font-mono whitespace-nowrap transition-all cursor-pointer ${
-                      selectedCategory === cat
-                        ? 'bg-iris text-white shadow-iris-glow font-medium'
-                        : 'bg-void-card hover:bg-zinc-800 text-silver hover:text-bone border border-void-border'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
+              {/* Category tabs: plain mono text + underline */}
+              <div className="flex items-center gap-6 overflow-x-auto no-scrollbar border-b border-void-border">
+                {CATEGORIES.map((cat) => {
+                  const active = selectedCategory === cat;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat)}
+                      aria-pressed={active}
+                      className={`relative label-mono pb-3 whitespace-nowrap transition-colors cursor-pointer ${
+                        active ? 'text-bone' : 'text-ash hover:text-bone'
+                      }`}
+                    >
+                      {cat}
+                      <span
+                        className={`absolute left-0 bottom-0 h-px bg-iris transition-[width] duration-300 ${
+                          active ? 'w-full' : 'w-0'
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Concert Cards Grid */}
               {loadingConcerts ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
                   {[1, 2, 3, 4].map((n) => (
-                    <div
-                      key={n}
-                      className="h-80 rounded-3xl bg-void-card/40 border border-void-border animate-pulse"
-                    />
+                    <div key={n} className="aspect-[3/4] rounded-lg bg-void-elevated animate-pulse" />
                   ))}
                 </div>
               ) : filteredConcerts.length === 0 ? (
-                <div className="py-12 text-center text-silver text-xs font-mono">
-                  No shows found matching "{searchQuery}". Try searching for Coldplay, Bruno Mars, or Taylor Swift.
+                <div className="py-16 text-center label-mono text-ash">
+                  No shows match “{searchQuery}”
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {filteredConcerts.map((concert) => (
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredConcerts.map((concert, idx) => (
                     <ConcertCard
                       key={concert._id}
                       concert={concert}
+                      featured={idx === 0}
                       isSelected={selectedConcert?._id === concert._id}
                       onSelect={(c) => {
                         setSelectedConcert(c);
@@ -404,38 +408,34 @@ export default function App() {
 
             {/* Interactive Visual Seating Map */}
             {selectedConcert && (
-              <section ref={seatingSectionRef} className="space-y-8 pt-10 border-t border-void-border">
-                <div className="text-center space-y-2">
-                  <span className="text-xs font-mono uppercase tracking-widest text-saffron font-semibold">
-                    INTERACTIVE STAGE SEATING
-                  </span>
-                  <h2 className="text-3xl sm:text-5xl font-normal tracking-tighter text-bone">
-                    {selectedConcert.title}
-                  </h2>
-                  <p className="text-xs sm:text-sm font-light text-silver max-w-lg mx-auto">
-                    Click any available seat to hold it for 10 minutes. Maximum 4 seats per reservation.
+              <section ref={seatingSectionRef} className="space-y-8 pt-12 border-t border-void-border">
+                <div className="space-y-3">
+                  <span className="label-mono text-ash">INTERACTIVE SEATING</span>
+                  <h2 className="display-lg text-bone">{selectedConcert.title}</h2>
+                  <p className="text-sm font-light text-ash max-w-[46ch] leading-relaxed">
+                    Click any available seat to hold it for 10 minutes. Maximum 4 seats per
+                    reservation.
                   </p>
                 </div>
 
-                {/* Glowing Curved Stage Arc */}
-                <StageCurve />
+                {/* Hairline boarding-pass panel: stage arc, legend, grid */}
+                <div className="hairline-panel p-4 sm:p-6 space-y-6">
+                  <StageCurve />
+                  <SeatLegend />
 
-                {/* Visual Legend */}
-                <SeatLegend />
-
-                {/* Interactive Seating Grid */}
-                {loadingSeats && seats.length === 0 ? (
-                  <div className="h-96 rounded-3xl bg-void-card/40 border border-void-border flex items-center justify-center">
-                    <RefreshCw className="w-8 h-8 text-iris animate-spin" />
-                  </div>
-                ) : (
-                  <SeatingGrid
-                    seats={seats}
-                    selectedSeats={selectedSeats}
-                    onToggleSeat={handleToggleSeat}
-                    onTestConcurrency={() => setIsInspectorOpen(true)}
-                  />
-                )}
+                  {loadingSeats && seats.length === 0 ? (
+                    <div className="h-96 border border-void-border flex items-center justify-center">
+                      <RefreshCw className="w-6 h-6 text-iris animate-spin" />
+                    </div>
+                  ) : (
+                    <SeatingGrid
+                      seats={seats}
+                      selectedSeats={selectedSeats}
+                      onToggleSeat={handleToggleSeat}
+                      onTestConcurrency={() => setIsInspectorOpen(true)}
+                    />
+                  )}
+                </div>
               </section>
             )}
           </div>
@@ -456,72 +456,65 @@ export default function App() {
       <AnimatePresence>
         {selectedSeats.length > 0 && selectedConcert && activeTab === 'discover' && (
           <motion.aside
-            initial={{ opacity: 0, y: 50 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
+            exit={{ opacity: 0, y: 30 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
             aria-label="Reservation Summary Bar"
-            className="fixed bottom-14 md:bottom-6 left-3 right-3 sm:mx-auto max-w-3xl z-50 bg-void-surface/95 border-2 border-iris/60 rounded-2xl sm:rounded-full p-3 sm:px-6 backdrop-blur-2xl shadow-[0_10px_40px_rgba(128,82,255,0.4)] flex flex-col sm:flex-row items-center justify-between gap-3"
+            className="fixed bottom-14 md:bottom-0 left-0 right-0 z-50 bg-void border-t border-void-border"
           >
-            <div className="flex items-center space-x-3 w-full sm:w-auto">
-              <div className="w-10 h-10 rounded-full bg-iris/20 border border-iris/40 flex items-center justify-center text-iris shrink-0 shadow-sm">
-                <ShoppingCart className="w-5 h-5" />
-              </div>
-              <div className="text-left flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-xs font-bold text-bone">
-                    {selectedSeats.length} Seat{selectedSeats.length > 1 ? 's' : ''} Selected:
-                  </span>
-                  {/* Selected Seat Badges */}
-                  <div className="flex flex-wrap gap-1">
-                    {selectedSeats.map((s) => (
-                      <span
-                        key={s._id}
-                        className="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-iris text-white shadow-sm"
-                      >
-                        {s.seatNumber}
-                      </span>
-                    ))}
-                  </div>
-                  {/* 10-Minute Countdown Timer */}
-                  <span className="text-[10px] font-mono text-saffron bg-saffron/15 px-2 py-0.5 rounded-full border border-saffron/30 font-semibold flex items-center space-x-1">
-                    <Clock className="w-3 h-3 text-saffron animate-pulse" />
-                    <span>{formatLockTimer(lockTimeLeft)} Left</span>
-                  </span>
-                </div>
-                <p className="text-xs font-mono text-silver mt-1">
-                  Total:{' '}
-                  <strong className="text-bone text-sm">
-                    {formatIDR(selectedSeats.reduce((sum, s) => sum + s.price, 0))}
-                  </strong>
-                </p>
-              </div>
-            </div>
+            <div className="max-w-page mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 min-w-0">
+                <span className="label-mono text-ash flex items-center gap-2">
+                  <ShoppingCart className="w-3.5 h-3.5" />
+                  {selectedSeats.length} Seat{selectedSeats.length > 1 ? 's' : ''}
+                </span>
 
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => setIsDrawerOpen(true)}
-              className="w-full sm:w-auto px-6 py-3 rounded-full bg-iris hover:bg-iris-hover text-white text-xs font-mono font-bold tracking-wide uppercase shadow-iris-glow transition-all flex items-center justify-center space-x-2 shrink-0 cursor-pointer"
-            >
-              <span>Checkout &amp; Issue Ticket</span>
-              <ArrowRight className="w-4 h-4" />
-            </motion.button>
+                <div className="flex flex-wrap gap-1">
+                  {selectedSeats.map((s) => (
+                    <span
+                      key={s._id}
+                      className="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-iris text-white"
+                    >
+                      {s.seatNumber}
+                    </span>
+                  ))}
+                </div>
+
+                <span className="font-mono text-[11px] text-saffron flex items-center gap-1.5">
+                  <Clock className="w-3 h-3 animate-pulse" />
+                  {formatLockTimer(lockTimeLeft)}
+                </span>
+
+                <span className="font-mono text-[11px] text-bone">
+                  {formatIDR(selectedSeats.reduce((sum, s) => sum + s.price, 0))}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsDrawerOpen(true)}
+                className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-iris hover:bg-iris-hover text-white label-mono font-semibold transition-colors flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+              >
+                <span>Checkout</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </motion.aside>
         )}
       </AnimatePresence>
 
       {/* FLOATING DEVELOPER INSPECTOR BUTTON (Desktop Only) */}
       <div className="hidden md:flex fixed bottom-6 right-6 z-30">
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+        <button
+          type="button"
           onClick={() => setIsInspectorOpen(true)}
-          className="flex items-center space-x-2 px-3.5 py-2 rounded-full bg-void-surface/90 hover:bg-zinc-900 border border-iris/40 hover:border-iris shadow-lg shadow-black/80 backdrop-blur-xl text-silver hover:text-bone text-xs font-mono transition-all cursor-pointer"
-          title="Open Concurrency Lab & Architecture Telemetry"
+          className="flex items-center gap-2 label-mono text-ash hover:text-bone transition-colors cursor-pointer"
+          title="Open concurrency lab and architecture telemetry"
         >
-          <Terminal className="w-3.5 h-3.5 text-iris" />
-          <span>&lt;/&gt; Engine Inspector</span>
-        </motion.button>
+          <Terminal className="w-3.5 h-3.5" />
+          <span>Engine Inspector</span>
+        </button>
       </div>
 
       {/* Engine Inspector Drawer Modal */}
@@ -563,7 +556,7 @@ export default function App() {
       )}
 
       {/* Professional Commercial Footer */}
-      <Footer />
+      <Footer onNavigate={setActiveTab} />
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import QRCode from 'qrcode';
-import { motion } from 'framer-motion';
-import { X, CheckCircle, Calendar, MapPin, Download, Sparkles, Shield, RotateCw, Navigation, Lock, Hash } from 'lucide-react';
-import confetti from 'canvas-confetti';
+import { motion, useReducedMotion } from 'framer-motion';
+import { X, CheckCircle, Calendar, MapPin, Download, RotateCw, Navigation, Hash } from 'lucide-react';
+
 
 export default function TicketModal({ order, onClose }) {
   const [qrDataUrl, setQrDataUrl] = useState('');
@@ -10,396 +10,308 @@ export default function TicketModal({ order, onClose }) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [glarePos, setGlarePos] = useState({ x: 50, y: 50 });
   const cardRef = useRef(null);
-  // Trigger themed celebration confetti on open
-  useEffect(() => {
-    confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#8052ff', '#15846e', '#ffb829', '#ffffff']
-    });
+  const reduce = useReducedMotion();
 
+  useEffect(() => {
     if (order?.qrTicketCode) {
       QRCode.toDataURL(order.qrTicketCode, {
-        width: 200,
+        width: 240,
         margin: 2,
-        color: {
-          dark: '#000000',
-          light: '#ffffff'
-        }
+        color: { dark: '#000000', light: '#ffffff' }
       })
-        .then((url) => setQrDataUrl(url))
+        .then(setQrDataUrl)
         .catch((err) => console.error('QR code generation failed:', err));
     }
-  }, [order]);
+  }, [order, reduce]);
 
-  // ponytail: clamp rotation to +-18deg and calculate opposite glare sweep
-  const handleMouseMove = (e) => {
+  // ponytail: clamp to ±18° and sweep the glare opposite the tilt; rAF spring only if WebGL is ever added
+  const handlePointer = (clientX, clientY, limit = 18) => {
     if (!cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-
-    const rotateX = Math.max(-18, Math.min(18, ((y - centerY) / centerY) * -18));
-    const rotateY = Math.max(-18, Math.min(18, ((x - centerX) / centerX) * 18));
+    const rotateX = Math.max(-limit, Math.min(limit, ((clientY - rect.top - centerY) / centerY) * -limit));
+    const rotateY = Math.max(-limit, Math.min(limit, ((clientX - rect.left - centerX) / centerX) * limit));
 
     setRotate({ x: rotateX, y: rotateY });
-    // Glare moves opposite to tilt
-    setGlarePos({
-      x: Math.max(10, Math.min(90, 50 - (rotateY / 18) * 40)),
-      y: Math.max(10, Math.min(90, 50 - (rotateX / 18) * 40))
-    });
+    setGlarePos({ x: 50 - (rotateY / limit) * 40, y: 50 - (rotateX / limit) * 40 });
   };
 
+  const handleMouseMove = (e) => handlePointer(e.clientX, e.clientY);
   const handleTouchMove = (e) => {
-    if (!cardRef.current || !e.touches[0]) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = e.touches[0].clientX - rect.left;
-    const y = e.touches[0].clientY - rect.top;
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-
-    const rotateX = Math.max(-16, Math.min(16, ((y - centerY) / centerY) * -16));
-    const rotateY = Math.max(-16, Math.min(16, ((x - centerX) / centerX) * 16));
-
-    setRotate({ x: rotateX, y: rotateY });
-    setGlarePos({
-      x: Math.max(10, Math.min(90, 50 - (rotateY / 16) * 40)),
-      y: Math.max(10, Math.min(90, 50 - (rotateX / 16) * 40))
-    });
+    if (e.touches[0]) handlePointer(e.touches[0].clientX, e.touches[0].clientY, 16);
   };
-
-  const handleMouseLeave = () => {
+  const handleReset = () => {
     setRotate({ x: 0, y: 0 });
     setGlarePos({ x: 50, y: 50 });
   };
+
   if (!order) return null;
 
   const formattedDate = new Date(order.concertDate).toLocaleDateString('en-US', {
-    weekday: 'long',
+    weekday: 'short',
     month: 'short',
     day: 'numeric',
     year: 'numeric'
   });
 
-  const formatIDR = (num) => {
-    return new Intl.NumberFormat('id-ID', {
+  const formatIDR = (num) =>
+    new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
       maximumFractionDigits: 0
     }).format(num);
-  };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const orderNumber = order.orderNumber || order.id || '—';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      {/* Dark Void Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-void/85 backdrop-blur-xl"
+        className="fixed inset-0 bg-void/90"
         onClick={onClose}
       />
 
-      {/* 3D Viewport Wrapper */}
-      <div className="relative w-full max-w-md perspective-1200 z-10 my-auto py-2">
-        {/* Interactive 3D Collectible Pass Card */}
+      <div className="relative w-full max-w-sm perspective-1200 z-10 my-auto py-2">
         <motion.div
-          initial={{ opacity: 0, scale: 0.88, y: 25 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.88, y: 25 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-          ref={cardRef}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleMouseLeave}
-          style={{
-            transform: `rotateY(${isFlipped ? 180 + rotate.y : rotate.y}deg) rotateX(${
-              isFlipped ? -rotate.x : rotate.x
-            }deg)`,
-            transition: isFlipped ? 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)' : 'transform 0.12s ease-out'
-          }}
-          className="w-full relative preserve-3d"
+          initial={reduce ? false : { opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+          className="w-full"
         >
-          {/* FRONT FACE OF 3D COLLECTIBLE PASS */}
+          {/* Rotation lives on a plain node: framer-motion owns `transform` on
+              its own elements and would overwrite the tilt. */}
           <div
+            ref={cardRef}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleReset}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleReset}
             style={{
-              transform: 'translateZ(0px)',
-              backfaceVisibility: 'hidden',
-              WebkitBackfaceVisibility: 'hidden'
+              transform: `rotateY(${isFlipped ? 180 + rotate.y : rotate.y}deg) rotateX(${
+                isFlipped ? -rotate.x : rotate.x
+              }deg)`,
+              transition: isFlipped
+                ? 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)'
+                : 'transform 0.12s ease-out'
             }}
-            className="w-full rounded-3xl bg-void-surface border-2 border-iris/50 shadow-iris-glow p-5 sm:p-7 relative preserve-3d overflow-hidden space-y-4"
+            className="w-full relative preserve-3d"
           >
-            {/* Holographic Iridescent Foil Glare Sweep (Opposite to tilt) */}
+          {/* ============ FRONT ============ */}
+          <div
+            className="relative w-full rounded-lg bg-void-surface border border-void-border preserve-3d"
+            style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+          >
+            {/* Holographic foil glare — moves opposite the tilt */}
             <div
+              className="absolute inset-0 pointer-events-none rounded-lg z-30"
               style={{
-                background: `radial-gradient(circle at ${glarePos.x}% ${glarePos.y}%, rgba(255,255,255,0.4) 0%, rgba(128,82,255,0.2) 35%, rgba(21,132,110,0.15) 60%, transparent 80%)`,
+                background: `radial-gradient(circle at ${glarePos.x}% ${glarePos.y}%, rgba(255,255,255,0.16) 0%, rgba(128,82,255,0.14) 40%, transparent 75%)`,
                 transform: 'translateZ(10px)'
               }}
-              className="absolute inset-0 pointer-events-none rounded-3xl z-30"
             />
 
-            {/* 3D Parallax Layer 1: Holographic Grid Overlay (translateZ: 15px) */}
-            <div
-              style={{ transform: 'translateZ(15px)' }}
-              className="absolute inset-0 bg-cyber-grid opacity-25 pointer-events-none rounded-3xl"
-            />
-
-            {/* Card Header (translateZ: 25px) */}
-            <div
-              style={{ transform: 'translateZ(25px)' }}
-              className="flex items-center justify-between pb-3 border-b border-void-border relative z-20 preserve-3d"
-            >
-              <div className="flex items-center space-x-2">
-                <span className="w-8 h-8 rounded-full bg-verdant/20 border border-verdant/40 flex items-center justify-center text-verdant shadow-sm">
-                  <CheckCircle className="w-4 h-4" />
-                </span>
-                <div>
-                  <span className="text-[10px] font-mono tracking-wider text-verdant uppercase font-semibold">
-                    OFFICIAL COLLECTIBLE PASS
-                  </span>
-                  <h3 className="text-sm font-medium text-bone">Verified VIP Admission</h3>
-                </div>
-              </div>
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded-full hover:bg-zinc-800 text-silver hover:text-bone transition-colors"
-                aria-label="Close"
+            <div className="p-6 space-y-5">
+              <div
+                className="flex items-start justify-between gap-4"
+                style={{ transform: 'translateZ(30px)' }}
               >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* 3D Parallax Layer 2: Concert Details & Seats (translateZ: 30px) */}
-            <div
-              style={{ transform: 'translateZ(30px)' }}
-              className="relative rounded-2xl bg-void-card/90 border border-void-border p-4 sm:p-5 space-y-3 z-20 preserve-3d shadow-md"
-            >
-              <div>
-                <span className="text-xs font-mono text-saffron uppercase tracking-wider font-semibold">
-                  {order.concertArtist}
-                </span>
-                <h2 className="text-xl font-normal tracking-tight text-bone mt-0.5">
-                  {order.concertTitle}
-                </h2>
+                <div className="space-y-1">
+                  <span className="label-mono text-saffron">{order.concertArtist}</span>
+                  <h2
+                    className="text-xl text-bone leading-tight"
+                    style={{ fontWeight: 500, letterSpacing: '-0.03em' }}
+                  >
+                    {order.concertTitle}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Close ticket"
+                  className="p-1 text-ash hover:text-bone transition-colors cursor-pointer shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
-              <div className="space-y-1 text-xs text-silver font-light">
-                <div className="flex items-center space-x-2">
-                  <Calendar className="w-3.5 h-3.5 text-ash" />
-                  <span>{formattedDate}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <MapPin className="w-3.5 h-3.5 text-ash" />
+              <div
+                className="space-y-1.5 font-mono text-[11px] text-ash"
+                style={{ transform: 'translateZ(30px)' }}
+              >
+                <p className="flex items-center gap-2">
+                  <Calendar className="w-3.5 h-3.5" />
+                  {formattedDate}
+                </p>
+                <p className="flex items-center gap-2">
+                  <MapPin className="w-3.5 h-3.5" />
                   <span className="truncate">{order.concertVenue}</span>
-                </div>
+                </p>
+                <p className="flex items-center gap-2 text-bone">
+                  <Hash className="w-3.5 h-3.5" />
+                  {orderNumber}
+                </p>
               </div>
 
-              {/* Allocated Seats Badges */}
-              <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-void-border">
-                <div>
-                  <span className="text-[10px] font-mono text-ash uppercase block mb-1">
-                    Allocated Seats
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {order.seats.map((seatNum, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-iris text-white shadow-iris-glow"
-                      >
-                        {seatNum}
-                      </span>
-                    ))}
-                  </div>
+              <div
+                className="flex items-end justify-between gap-3"
+                style={{ transform: 'translateZ(30px)' }}
+              >
+                <div className="flex flex-wrap gap-1.5">
+                  {order.seats.map((seatNum, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2 py-0.5 rounded bg-iris text-white font-mono text-[11px] font-semibold"
+                    >
+                      {seatNum}
+                    </span>
+                  ))}
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-mono text-ash uppercase block mb-1">
-                    Total Paid
-                  </span>
-                  <span className="text-sm font-mono font-semibold text-bone">
-                    {formatIDR(order.totalAmount)}
-                  </span>
-                </div>
+                <span className="font-mono text-xs text-saffron shrink-0">
+                  {formatIDR(order.totalAmount)}
+                </span>
               </div>
             </div>
 
-            {/* Perforated Ticket Line */}
-            <div className="relative border-b-2 border-dashed border-void-border my-1">
-              <span className="absolute -left-7 -top-3 w-6 h-6 rounded-full bg-void-surface border-r border-void-border" />
-              <span className="absolute -right-7 -top-3 w-6 h-6 rounded-full bg-void-surface border-l border-void-border" />
+            {/* Perforated divider with notch cutouts at the canvas edge */}
+            <div className="relative">
+              <span className="absolute -left-3 -top-3 w-6 h-6 rounded-full bg-void z-20" />
+              <span className="absolute -right-3 -top-3 w-6 h-6 rounded-full bg-void z-20" />
+              <div className="border-t border-dashed border-void-border mx-6" />
             </div>
 
-            {/* 3D Parallax Layer 3: QR Code + VIP Badge (translateZ: 45px) */}
-            <div
-              style={{ transform: 'translateZ(45px)' }}
-              className="p-4 rounded-2xl bg-void-card/95 border border-iris/40 flex flex-col items-center justify-center space-y-2.5 shadow-2xl relative z-20 preserve-3d"
-            >
-              <div className="p-2.5 bg-white rounded-xl shadow-xl border border-white/30">
-                {qrDataUrl ? (
-                  <img
-                    src={qrDataUrl}
-                    alt="Official E-Ticket QR Code"
-                    className="w-32 h-32 sm:w-36 sm:h-36 object-contain rounded-md"
-                  />
-                ) : (
-                  <div className="w-32 h-32 flex items-center justify-center text-xs font-mono text-zinc-500">
-                    Generating Pass...
-                  </div>
-                )}
+            {/* QR stub, floating above the card face */}
+            <div className="p-6 pt-5" style={{ transform: 'translateZ(45px)' }}>
+              <div className="flex justify-center">
+                <div className="p-2 bg-white rounded">
+                  {qrDataUrl ? (
+                    <img
+                      src={qrDataUrl}
+                      alt="E-ticket QR code"
+                      className="w-36 h-36 object-contain"
+                    />
+                  ) : (
+                    <div className="w-36 h-36 flex items-center justify-center text-[11px] font-mono text-zinc-500">
+                      Generating…
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <span className="font-mono text-[10px] text-silver tracking-widest uppercase">
+              <p className="mt-3 text-center font-mono text-[10px] text-ash tracking-widest uppercase break-all">
                 {order.qrTicketCode}
-              </span>
+              </p>
 
-              <div className="flex items-center space-x-1.5 text-[9px] font-mono text-verdant bg-verdant/10 px-3 py-0.5 rounded-full border border-verdant/30 font-semibold">
-                <Shield className="w-3 h-3 text-verdant" />
-                <span>AUTHENTIC ENCRYPTED PASS • ROW PRIORITY</span>
-              </div>
+              <p className="mt-2 flex items-center justify-center gap-1.5 label-mono text-ash">
+                <CheckCircle className="w-3 h-3" />
+                Verified admission
+              </p>
             </div>
 
-            {/* Front Controls: Flip Ticket 360° Button */}
-            <div
-              style={{ transform: 'translateZ(30px)' }}
-              className="flex items-center justify-between gap-3 pt-2 relative z-20"
-            >
+            <div className="flex items-center gap-2 px-6 pb-6" style={{ transform: 'translateZ(30px)' }}>
               <button
                 type="button"
                 onClick={() => setIsFlipped(true)}
-                className="flex-1 py-2.5 px-4 rounded-full bg-void-card hover:bg-iris text-silver hover:text-white border border-void-border hover:border-iris transition-all text-xs font-mono font-semibold flex items-center justify-center space-x-2 cursor-pointer shadow-sm"
+                className="flex-1 py-2.5 rounded-full bg-iris hover:bg-iris-hover text-white label-mono font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
               >
                 <RotateCw className="w-3.5 h-3.5" />
-                <span>Flip Ticket (360°)</span>
+                Flip
               </button>
-
               <button
                 type="button"
-                onClick={handlePrint}
-                className="py-2.5 px-4 rounded-full bg-void-surface hover:bg-zinc-800 text-silver hover:text-bone border border-void-border text-xs font-mono transition-colors flex items-center space-x-1.5 cursor-pointer"
-                title="Print ticket"
+                onClick={() => window.print()}
+                className="px-4 py-2.5 rounded-full border border-void-border text-ash hover:text-bone label-mono transition-colors cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Print</span>
+                <span className="sr-only">Print ticket</span>
               </button>
             </div>
           </div>
 
-          {/* BACK FACE OF 3D COLLECTIBLE PASS */}
+          {/* ============ BACK ============ */}
           <div
+            className="absolute inset-0 w-full h-full rounded-lg bg-void-surface border border-void-border p-6 flex flex-col justify-between gap-4 overflow-hidden preserve-3d"
             style={{
-              transform: 'rotateY(180deg) translateZ(0px)',
+              transform: 'rotateY(180deg)',
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden'
             }}
-            className="absolute inset-0 w-full h-full rounded-3xl bg-void-surface border-2 border-saffron/50 shadow-saffron-glow p-5 sm:p-7 relative preserve-3d overflow-hidden flex flex-col justify-between"
           >
-            {/* Holographic Border Sheen */}
-            <div className="absolute inset-0 bg-gradient-to-br from-saffron/10 via-iris/10 to-verdant/10 pointer-events-none rounded-3xl" />
-
-            {/* Back Header (translateZ: 25px) */}
-            <div
-              style={{ transform: 'translateZ(25px)' }}
-              className="flex items-center justify-between pb-3 border-b border-void-border relative z-20"
-            >
-              <div className="flex items-center space-x-2">
-                <span className="w-8 h-8 rounded-full bg-saffron/20 border border-saffron/40 flex items-center justify-center text-saffron">
-                  <Navigation className="w-4 h-4" />
+            <div className="flex items-start justify-between gap-4" style={{ transform: 'translateZ(30px)' }}>
+              <div className="space-y-1">
+                <span className="label-mono text-ash flex items-center gap-1.5">
+                  <Navigation className="w-3 h-3" />
+                  Venue map &amp; entry
                 </span>
-                <div>
-                  <span className="text-[10px] font-mono tracking-wider text-saffron uppercase font-semibold">
-                    VENUE MAP & INSTRUCTIONS
-                  </span>
-                  <h3 className="text-sm font-medium text-bone">Official Gate Entry Pass</h3>
-                </div>
+                <h3 className="text-sm text-bone">Gate instructions</h3>
               </div>
-
               <button
+                type="button"
                 onClick={onClose}
-                className="p-1.5 rounded-full hover:bg-zinc-800 text-silver hover:text-bone transition-colors"
-                aria-label="Close"
+                aria-label="Close ticket"
+                className="p-1 text-ash hover:text-bone transition-colors cursor-pointer shrink-0"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Back Body: Venue Gate Map & Entry Instructions (translateZ: 30px) */}
-            <div
-              style={{ transform: 'translateZ(30px)' }}
-              className="space-y-3 relative z-20 my-auto py-2"
-            >
-              {/* Venue Gate Map Diagram */}
-              <div className="p-3.5 rounded-2xl bg-void-card/90 border border-void-border space-y-2">
-                <div className="flex items-center justify-between text-[11px] font-mono text-bone font-semibold">
-                  <span>STADIUM GATE NAVIGATION</span>
-                  <span className="text-iris">EAST ENTRANCE</span>
+            <div className="space-y-4 my-auto py-3" style={{ transform: 'translateZ(30px)' }}>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between label-mono text-ash">
+                  <span>Gate navigation</span>
+                  <span className="text-bone">East entrance</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
-                  <div className="p-2 rounded-xl bg-iris/10 border border-iris/30 text-iris">
-                    <span className="font-bold block">GATE A (VIP PRIORITY)</span>
-                    <span className="text-[9px] text-silver font-light">Fast-track soundbooth apex</span>
+                <div className="grid grid-cols-2 gap-2 font-mono text-[10px]">
+                  <div className="border border-iris rounded p-2 text-bone">
+                    <span className="block">Gate A · VIP</span>
+                    <span className="block text-ash">Fast-track soundbooth</span>
                   </div>
-                  <div className="p-2 rounded-xl bg-void-surface border border-void-border text-silver">
-                    <span className="font-bold block text-bone">GATE B (GENERAL)</span>
-                    <span className="text-[9px] text-ash font-light">CAT 1 & CAT 2 turnstiles</span>
+                  <div className="border border-void-border rounded p-2 text-bone">
+                    <span className="block">Gate B · General</span>
+                    <span className="block text-ash">CAT 1 &amp; CAT 2</span>
                   </div>
                 </div>
               </div>
 
-              {/* Gate Entry Instructions */}
-              <div className="p-3.5 rounded-2xl bg-void-card/90 border border-void-border space-y-1.5">
-                <span className="text-[10px] font-mono text-saffron uppercase font-semibold block">
-                  Gate Entry Protocol
-                </span>
-                <ul className="text-[10px] font-mono text-silver space-y-1 list-disc list-inside">
-                  <li>Display QR code at digital turnstile optical reader.</li>
-                  <li>Government ID matching booking name must be presented.</li>
-                  <li>Anti-passback active: single scan admission only.</li>
+              <div className="space-y-1.5">
+                <span className="label-mono text-saffron">Gate protocol</span>
+                <ul className="font-mono text-[10px] text-ash space-y-1 list-disc list-inside leading-relaxed">
+                  <li>Display QR at the digital turnstile reader.</li>
+                  <li>Government ID matching the booking name.</li>
+                  <li>Anti-passback active: single scan only.</li>
                 </ul>
               </div>
 
-              {/* Cryptographic Order Hash */}
-              <div className="p-3 rounded-2xl bg-void-card/90 border border-void-border space-y-1">
-                <div className="flex items-center space-x-1.5 text-[9px] font-mono text-silver">
-                  <Hash className="w-3 h-3 text-verdant" />
-                  <span>CRYPTOGRAPHIC ORDER HASH</span>
-                </div>
-                <p className="text-[9px] font-mono text-bone/80 break-all select-all bg-void-surface p-1.5 rounded-lg border border-void-border">
-                  sha256:{order._id || order.id || 'reserva_atomic_lock_pass'}
-                  _verified_0x8f4c2e
+              <div className="space-y-1">
+                <span className="label-mono text-ash">Order hash</span>
+                <p className="font-mono text-[9px] text-ash break-all select-all border border-void-border rounded p-1.5">
+                  sha256:{order._id || order.id || 'reserva_atomic_lock_pass'}_verified_0x8f4c2e
                 </p>
               </div>
             </div>
 
-            {/* Back Footer Controls: Flip Back Button (translateZ: 30px) */}
-            <div
-              style={{ transform: 'translateZ(30px)' }}
-              className="pt-2 border-t border-void-border flex items-center justify-between gap-3 relative z-20"
-            >
+            <div className="flex items-center gap-2" style={{ transform: 'translateZ(30px)' }}>
               <button
                 type="button"
                 onClick={() => setIsFlipped(false)}
-                className="flex-1 py-2.5 px-4 rounded-full bg-iris hover:bg-iris-hover text-white text-xs font-mono font-semibold flex items-center justify-center space-x-2 cursor-pointer shadow-iris-glow transition-all"
+                className="flex-1 py-2.5 rounded-full bg-iris hover:bg-iris-hover text-white label-mono font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
               >
                 <RotateCw className="w-3.5 h-3.5" />
-                <span>Flip Back to Front (QR Pass)</span>
+                Back to QR
               </button>
-
               <button
                 type="button"
                 onClick={onClose}
-                className="py-2.5 px-5 rounded-full bg-void-card hover:bg-zinc-800 text-silver hover:text-bone border border-void-border text-xs font-mono transition-colors cursor-pointer"
+                className="px-5 py-2.5 rounded-full border border-void-border text-ash hover:text-bone label-mono transition-colors cursor-pointer"
               >
                 Done
               </button>
             </div>
           </div>
+        </div>
         </motion.div>
       </div>
     </div>

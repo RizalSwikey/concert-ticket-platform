@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import { useTheme } from '../../context/ThemeContext';
 
 // True isometric projection computed in math (rotateZ by yaw, then rotateX by pitch),
 // not CSS 3D: the browser keeps SVG crisp at any zoom, while `transform: rotateX()`
@@ -26,25 +25,15 @@ const STAGE_H = 24;
 const STAGE_BACK = -34;
 const STAGE_FRONT = -12;
 
+// Colours come from the shared tokens, so light/dark adapt with no JS branch.
 const PALETTE = {
-  dark: {
-    free: { top: '#26262B', front: '#131316', stroke: '#52525B' },
-    selected: { top: '#8052FF', front: '#4B15E0', stroke: '#C4B0FF' },
-    locked: { top: '#FFB829', front: '#96690F', stroke: '#FFE0A3' },
-    booked: { top: '#15846E', front: '#0A4A3E', stroke: '#4BD3B4' }
-  },
-  light: {
-    free: { top: '#FFFFFF', front: '#C7C7CF', stroke: '#8F8F99' },
-    selected: { top: '#6328FF', front: '#4010C4', stroke: '#B49BFF' },
-    locked: { top: '#F59E0B', front: '#9A5A05', stroke: '#FCD34D' },
-    booked: { top: '#10B981', front: '#046B52', stroke: '#6EE7B7' }
-  }
+  free: { top: 'var(--bg-elevated)', front: 'var(--border-subtle)', stroke: 'var(--seat-available-border)' },
+  selected: { top: 'var(--accent-iris)', front: 'var(--accent-iris)', stroke: 'var(--accent-iris)' },
+  locked: { top: 'var(--accent-saffron)', front: 'var(--accent-saffron)', stroke: 'var(--accent-saffron)' },
+  booked: { top: 'var(--bg-elevated)', front: 'var(--bg-elevated)', stroke: 'var(--seat-booked-border)' }
 };
 
 export default function Arena3DView({ seats, selectedSeats, onToggleSeat, tilt = 38 }) {
-  const { isDark } = useTheme();
-  const pal = PALETTE[isDark ? 'dark' : 'light'];
-
   const pitch = (tilt * Math.PI) / 180;
   const cosP = Math.cos(pitch);
   const sinP = Math.sin(pitch);
@@ -143,24 +132,8 @@ export default function Arena3DView({ seats, selectedSeats, onToggleSeat, tilt =
         viewBox={viewBox}
         role="group"
         aria-label="3D isometric arena seating view"
-        className="w-full h-auto min-w-[560px] md:min-w-[680px]"
+        className="w-full h-auto min-w-[520px]"
       >
-        <defs>
-          <linearGradient id="stageScreen" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#B79BFF" />
-            <stop offset="45%" stopColor="#8052FF" />
-            <stop offset="100%" stopColor="#2A0F7A" />
-          </linearGradient>
-          <linearGradient id="stageFloor" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#8052FF" stopOpacity="0.45" />
-            <stop offset="100%" stopColor="#8052FF" stopOpacity="0.04" />
-          </linearGradient>
-          <radialGradient id="stageGlow" cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0%" stopColor="#8052FF" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="#8052FF" stopOpacity="0" />
-          </radialGradient>
-        </defs>
-
         {/* Row guide lines painted on the arena floor, with row letter at both ends */}
         {rowLines.map(({ y, row, z, tier, isTierStart }) => {
           const a = project(-SEAT_HALF_W, y, z);
@@ -172,7 +145,7 @@ export default function Arena3DView({ seats, selectedSeats, onToggleSeat, tilt =
                 y1={a[1]}
                 x2={b[0]}
                 y2={b[1]}
-                stroke={isDark ? '#27272A' : '#E4E4E7'}
+                stroke="var(--grid-line)"
                 strokeWidth="1"
               />
               <text
@@ -180,10 +153,9 @@ export default function Arena3DView({ seats, selectedSeats, onToggleSeat, tilt =
                 y={a[1] + 4}
                 textAnchor="middle"
                 className="select-none pointer-events-none"
-                fill={isDark ? '#71717A' : '#A1A1AA'}
+                fill="var(--text-tertiary)"
                 fontSize="12"
                 fontFamily="ui-monospace, monospace"
-                fontWeight="700"
               >
                 {row}
               </text>
@@ -192,10 +164,9 @@ export default function Arena3DView({ seats, selectedSeats, onToggleSeat, tilt =
                 y={b[1] + 4}
                 textAnchor="middle"
                 className="select-none pointer-events-none"
-                fill={isDark ? '#71717A' : '#A1A1AA'}
+                fill="var(--text-tertiary)"
                 fontSize="12"
                 fontFamily="ui-monospace, monospace"
-                fontWeight="700"
               >
                 {row}
               </text>
@@ -205,10 +176,9 @@ export default function Arena3DView({ seats, selectedSeats, onToggleSeat, tilt =
                   y={b[1] + 4}
                   textAnchor="start"
                   className="select-none pointer-events-none"
-                  fill={isDark ? '#8052FF' : '#4B15E0'}
+                  fill="var(--accent-iris)"
                   fontSize="10"
                   fontFamily="ui-monospace, monospace"
-                  fontWeight="700"
                   letterSpacing="1.5"
                 >
                   {tier.toUpperCase()}
@@ -218,16 +188,7 @@ export default function Arena3DView({ seats, selectedSeats, onToggleSeat, tilt =
           );
         })}
 
-        {/* Stage light bloom spilling onto the floor */}
-        <ellipse
-          cx={project(0, 24, 0)[0]}
-          cy={project(0, 24, 0)[1]}
-          rx={STAGE_HALF * 0.85}
-          ry={54}
-          fill="url(#stageGlow)"
-        />
-
-        {/* Stage: floor plate then a standing LED wall*/}
+        {/* Stage floor plate, then the standing LED wall */}
         <polygon
           points={quad(
             pt(-STAGE_HALF, STAGE_BACK, 0),
@@ -235,9 +196,9 @@ export default function Arena3DView({ seats, selectedSeats, onToggleSeat, tilt =
             pt(STAGE_HALF, STAGE_FRONT, 0),
             pt(-STAGE_HALF, STAGE_FRONT, 0)
           )}
-          fill="url(#stageFloor)"
-          stroke="#8052FF"
-          strokeOpacity="0.3"
+          fill="none"
+          stroke="var(--border-subtle)"
+          strokeWidth="1"
         />
         <polygon
           points={quad(
@@ -246,22 +207,18 @@ export default function Arena3DView({ seats, selectedSeats, onToggleSeat, tilt =
             pt(STAGE_HALF, STAGE_FRONT, STAGE_H),
             pt(-STAGE_HALF, STAGE_FRONT, STAGE_H)
           )}
-          fill="url(#stageScreen)"
-          stroke="#C4B0FF"
-          strokeWidth="1.4"
+          fill="var(--bg-elevated)"
+          stroke="var(--border-medium)"
+          strokeWidth="1.2"
         />
         <text
           x={labelPos[0]}
           y={labelPos[1] + 4}
           textAnchor="middle"
           className="select-none pointer-events-none"
-          fill="#FFFFFF"
-          stroke="rgba(24,10,60,0.55)"
-          strokeWidth="2.5"
-          paintOrder="stroke"
-          fontSize="15"
+          fill="var(--text-primary)"
+          fontSize="14"
           fontFamily="ui-monospace, monospace"
-          fontWeight="700"
           letterSpacing="3"
         >
           MAIN STAGE
@@ -274,9 +231,17 @@ export default function Arena3DView({ seats, selectedSeats, onToggleSeat, tilt =
           const isBooked = seat.status === 'BOOKED';
           const isHeldByMe = seat.isLockedByMe;
 
-          const key = isSelected || isHeldByMe ? 'selected' : isLocked ? 'locked' : isBooked ? 'booked' : 'free';
-          const col = pal[key];
-          const height = key === 'selected' ? RISE.selected : key === 'locked' ? RISE.locked : RISE.flat;
+          const key =
+            isSelected || isHeldByMe
+              ? 'selected'
+              : isLocked
+              ? 'locked'
+              : isBooked
+              ? 'booked'
+              : 'free';
+          const col = PALETTE[key];
+          const height =
+            key === 'selected' ? RISE.selected : key === 'locked' ? RISE.locked : RISE.flat;
           const topZ = z + height;
           const blocked = isBooked || (isLocked && !isHeldByMe);
 
@@ -313,31 +278,46 @@ export default function Arena3DView({ seats, selectedSeats, onToggleSeat, tilt =
                   onToggleSeat(seat);
                 }
               }}
-              className={blocked ? '' : 'cursor-pointer outline-none hover:opacity-85'}
+              className={
+                blocked ? '' : 'cursor-pointer outline-none focus-visible:opacity-80 hover:opacity-85'
+              }
+              opacity={key === 'booked' ? 0.4 : 1}
             >
               <title>{`${seat.seatNumber} · ${seat.tier} · ${seat.status}`}</title>
               {key === 'selected' && (
-                <ellipse
-                  cx={project(x, y, z)[0]}
-                  cy={project(x, y, z)[1]}
-                  rx={W * 2.6}
-                  ry={W * 1.6}
-                  fill="#8052FF"
-                  opacity="0.28"
+                <polygon
+                  points={quad(
+                    pt(x - W * 2.2, y - D * 2.2, z),
+                    pt(x + W * 2.2, y - D * 2.2, z),
+                    pt(x + W * 2.2, y + D * 2.2, z),
+                    pt(x - W * 2.2, y + D * 2.2, z)
+                  )}
+                  fill="none"
+                  stroke="var(--accent-iris)"
+                  strokeWidth="1.5"
                 />
               )}
-              <polygon points={sideFace} fill={isDark ? '#0A0A0C' : '#B4B4BE'} opacity="0.9" />
-              <polygon points={frontFace} fill={col.front} />
+              <polygon points={sideFace} fill={col.front} fillOpacity="0.55" />
+              <polygon
+                points={frontFace}
+                fill={col.front}
+                fillOpacity={key === 'free' ? 0.35 : 0.85}
+              />
               <polygon points={topFace} fill={col.top} stroke={col.stroke} strokeWidth="1" />
               <text
                 x={project(x, y, topZ)[0]}
                 y={project(x, y, topZ)[1] + 4}
                 textAnchor="middle"
                 className="select-none pointer-events-none"
-                fill={key === 'free' ? (isDark ? '#A1A1AA' : '#3F3F46') : '#FFFFFF'}
+                fill={
+                  key === 'free'
+                    ? 'var(--seat-available-text)'
+                    : key === 'booked'
+                    ? 'var(--seat-booked-text)'
+                    : '#ffffff'
+                }
                 fontSize="12"
                 fontFamily="ui-monospace, monospace"
-                fontWeight="700"
               >
                 {seat.number}
               </text>

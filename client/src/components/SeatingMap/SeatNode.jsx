@@ -1,59 +1,43 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from '../../context/ThemeContext';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Lock, Clock } from 'lucide-react';
 
-export default function SeatNode({
-  seat,
-  isSelected,
-  onToggle,
-  onHover
-}) {
-  const { isDark } = useTheme();
+export default function SeatNode({ seat, isSelected, onToggle, onHover }) {
   const [showTooltip, setShowTooltip] = useState(false);
+  const reduce = useReducedMotion();
 
-  const formatIDR = (num) => {
-    return new Intl.NumberFormat('id-ID', {
+  const formatIDR = (num) =>
+    new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
       maximumFractionDigits: 0
     }).format(num);
-  };
 
-  const isAvailable = seat.status === 'AVAILABLE';
   const isLocked = seat.status === 'LOCKED';
   const isBooked = seat.status === 'BOOKED';
-  const isLockedByMe = seat.isLockedByMe;
+  const isMine = isSelected || seat.isLockedByMe;
+  const blocked = isBooked || (isLocked && !seat.isLockedByMe);
 
-  // Exact dual-theme high-contrast seat states
-  let stateClasses = '';
-
-  if (isSelected || isLockedByMe) {
-    stateClasses = isDark
-      ? 'bg-[#8052FF] text-white border-white shadow-iris-glow border z-10'
-      : 'bg-[#6328FF] text-white border-[#4B15E0] shadow-md border z-10';
+  // State reads from tokens, so light/dark stay in sync automatically.
+  let stateClasses = 'border-[var(--seat-available-border)] text-[var(--seat-available-text)]';
+  if (isMine) {
+    stateClasses = 'bg-iris border-iris text-white ring-2 ring-iris/40 z-10';
   } else if (isLocked) {
-    stateClasses = isDark
-      ? 'bg-[#FFB829]/20 border border-[#FFB829] text-[#FFB829] cursor-not-allowed'
-      : 'bg-[#FEF3C7] border border-[#F59E0B] text-[#B45309] font-semibold cursor-not-allowed';
+    stateClasses =
+      'bg-[var(--seat-locked-bg)] border-dashed border-[var(--seat-locked-border)] text-[var(--seat-locked-text)] cursor-not-allowed';
   } else if (isBooked) {
-    stateClasses = isDark
-      ? 'bg-[#15846E]/25 border border-[#15846E] text-[#15846E] cursor-not-allowed'
-      : 'bg-[#D1FAE5] border border-[#10B981] text-[#065F46] font-semibold cursor-not-allowed';
+    stateClasses =
+      'bg-[var(--seat-booked-bg)] border-[var(--seat-booked-border)] text-[var(--seat-booked-text)] opacity-40 cursor-not-allowed';
   } else {
-    // Available
-    stateClasses = isDark
-      ? 'bg-[#18181B] border border-[#27272A] text-zinc-400 hover:border-[#8052FF] hover:text-white cursor-pointer'
-      : 'bg-[#FFFFFF] border border-[#D4D4D8] text-[#3F3F46] hover:border-[#6328FF] hover:bg-[#F3EEFF] cursor-pointer';
+    stateClasses += ' hover:border-iris hover:text-bone cursor-pointer';
   }
 
   const handleClick = (e) => {
     e.stopPropagation();
-    if (isBooked || (isLocked && !isLockedByMe)) {
-      return;
-    }
+    if (blocked) return;
     onToggle(seat);
   };
+
   return (
     <div
       className="relative flex items-center justify-center w-full"
@@ -65,99 +49,69 @@ export default function SeatNode({
     >
       <motion.button
         type="button"
-        disabled={isBooked || (isLocked && !isLockedByMe)}
+        disabled={blocked}
         onClick={handleClick}
-        whileHover={!isBooked && (!isLocked || isLockedByMe) ? { scale: 1.12 } : {}}
-        whileTap={!isBooked && (!isLocked || isLockedByMe) ? { scale: 0.92 } : {}}
-        transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-        className={`w-full aspect-square rounded-lg flex items-center justify-center text-[10px] sm:text-xs font-mono font-semibold transition-colors relative select-none ${stateClasses}`}
-        aria-label={`Seat ${seat.seatNumber}`}
+        whileHover={blocked || reduce ? undefined : { scale: 1.08 }}
+        whileTap={blocked || reduce ? undefined : { scale: 0.94 }}
+        transition={{ duration: 0.12, ease: 'easeOut' }}
+        className={`w-full aspect-square rounded-full border flex items-center justify-center text-[10px] sm:text-xs font-mono font-semibold select-none transition-colors ${stateClasses}`}
+        aria-label={`Seat ${seat.seatNumber}, ${seat.tier}, ${
+          isMine ? 'selected' : isLocked ? 'held' : isBooked ? 'sold' : 'available'
+        }`}
+        aria-pressed={isMine}
       >
-        {/* Breathing pulse ring for locked seats */}
-        {isLocked && !isLockedByMe && (
-          <motion.span
-            animate={{
-              scale: [1, 1.25, 1],
-              opacity: [0.6, 0.1, 0.6]
-            }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-            className="absolute inset-0 rounded-md border border-saffron pointer-events-none"
-          />
-        )}
-
-        {/* Selected ripple ring */}
-        {(isSelected || isLockedByMe) && (
-          <motion.span
-            initial={{ scale: 0.8, opacity: 0.8 }}
-            animate={{ scale: 1.25, opacity: 0 }}
-            transition={{ duration: 0.9, repeat: Infinity }}
-            className="absolute inset-0 rounded-md border-2 border-iris pointer-events-none"
-          />
-        )}
-
-        {isSelected || isLockedByMe ? (
-          <span className="font-bold">{seat.number}</span>
-        ) : isLocked ? (
-          <Lock className="w-3.5 h-3.5 animate-pulse" />
+        {isLocked && !seat.isLockedByMe ? (
+          <Lock className="w-3 h-3" />
         ) : isBooked ? (
-          <span className="text-[9px] opacity-70">✕</span>
+          <span aria-hidden="true">×</span>
         ) : (
           <span>{seat.number}</span>
         )}
       </motion.button>
 
-      {/* Floating Animated Tooltip */}
       <AnimatePresence>
         {showTooltip && (
           <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.95 }}
+            initial={reduce ? false : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, y: 4 }}
             transition={{ duration: 0.15 }}
-            className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none w-52 p-3 rounded-2xl bg-void-surface border border-void-border backdrop-blur-2xl shadow-2xl text-left space-y-1.5"
+            className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none w-48 p-3 rounded-lg bg-void-surface border border-void-border text-left space-y-1.5"
           >
-            <div className="flex items-center justify-between border-b border-void-border pb-1.5">
-              <span className="font-mono text-xs font-semibold text-bone">
-                {seat.seatNumber}
-              </span>
-              <span className="text-[10px] font-mono text-saffron px-1.5 py-0.5 rounded-full bg-saffron/10 border border-saffron/20 font-semibold">
-                {seat.tier}
-              </span>
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-xs text-bone">{seat.seatNumber}</span>
+              <span className="label-mono text-saffron">{seat.tier}</span>
             </div>
-
-            <div className="text-[11px] text-silver font-mono">
-              {formatIDR(seat.price)}
-            </div>
-
-            <div className="text-[10px] font-mono flex items-center justify-between pt-0.5">
-              <span className="text-silver">Status:</span>
+            <p className="font-mono text-[11px] text-ash">{formatIDR(seat.price)}</p>
+            <p className="font-mono text-[10px] flex items-center justify-between">
+              <span className="text-ash">Status</span>
               <span
                 className={
-                  isSelected || isLockedByMe
-                    ? 'text-iris font-semibold'
+                  isMine
+                    ? 'text-iris'
                     : isLocked
-                    ? 'text-saffron font-semibold flex items-center space-x-1'
+                    ? 'text-saffron'
                     : isBooked
-                    ? 'text-verdant font-semibold'
-                    : 'text-bone font-medium'
+                    ? 'text-ash'
+                    : 'text-bone'
                 }
               >
                 {isSelected ? (
                   'Selected'
-                ) : isLockedByMe ? (
-                  'Held by You'
+                ) : seat.isLockedByMe ? (
+                  'Held by you'
                 ) : isLocked ? (
-                  <span className="flex items-center space-x-1">
-                    <Clock className="w-3 h-3 text-saffron" />
-                    <span>Locked ({seat.remainingSeconds || 600}s)</span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {seat.remainingSeconds || 600}s
                   </span>
                 ) : isBooked ? (
-                  'Sold Out'
+                  'Sold'
                 ) : (
                   'Available'
                 )}
               </span>
-            </div>
+            </p>
           </motion.div>
         )}
       </AnimatePresence>

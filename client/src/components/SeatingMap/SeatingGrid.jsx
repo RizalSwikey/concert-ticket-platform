@@ -1,298 +1,234 @@
 import React, { useState } from 'react';
 import SeatNode from './SeatNode';
 import Arena3DView from './Arena3DView';
-import { ZoomIn, ZoomOut, RotateCcw, MoveHorizontal, Eye, Box, Grid2x2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Eye } from 'lucide-react';
 
-export default function SeatingGrid({
-  seats,
-  selectedSeats,
-  onToggleSeat
-}) {
+export default function SeatingGrid({ seats, selectedSeats, onToggleSeat }) {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [hoveredSeat, setHoveredSeat] = useState(null);
   const [is3D, setIs3D] = useState(true);
   const [tilt, setTilt] = useState(38);
 
-  const handleZoomIn = () => setZoomLevel((z) => Math.min(z + 0.15, 1.35));
-  const handleZoomOut = () => setZoomLevel((z) => Math.max(z - 0.15, 0.8));
-  const handleResetZoom = () => setZoomLevel(1);
-
-  // Group seats by Tier, then Row
   const tiers = ['VIP', 'CAT 1', 'CAT 2'];
 
-  const seatsByTier = {
-    VIP: {},
-    'CAT 1': {},
-    'CAT 2': {}
-  };
-
+  const seatsByTier = { VIP: {}, 'CAT 1': {}, 'CAT 2': {} };
   seats.forEach((seat) => {
     const tier = seat.tier || 'CAT 1';
     if (!seatsByTier[tier]) seatsByTier[tier] = {};
-    if (!seatsByTier[tier][seat.row]) seatsByTier[tier][seat.row] = [];
-    seatsByTier[tier][seat.row].push(seat);
+    (seatsByTier[tier][seat.row] ||= []).push(seat);
   });
 
-  // Sightline POV Calculation: Stage Distance & Viewing Angle
-  const activeSeat = hoveredSeat || (selectedSeats.length > 0 ? selectedSeats[selectedSeats.length - 1] : null);
+  // Sightline POV: distance by row, angle by left/right offset.
+  const activeSeat =
+    hoveredSeat || (selectedSeats.length > 0 ? selectedSeats[selectedSeats.length - 1] : null);
 
   const rowDistances = { A: 8, B: 14, C: 22, D: 30, E: 38, F: 46 };
-  const seatDist = activeSeat ? (rowDistances[activeSeat.row] || 20) : null;
+  const seatDist = activeSeat ? rowDistances[activeSeat.row] || 20 : null;
   const seatAngle = activeSeat ? Math.round(((activeSeat.number - 10.5) / 9.5) * 28) : 0;
 
-  let zoneLabel = '0° Acoustic Sweetspot (Dead Center)';
+  let zoneLabel = 'Dead center';
   if (activeSeat) {
-    if (seatAngle <= -16) zoneLabel = `Stage Left Wing (-${Math.abs(seatAngle)}°)`;
-    else if (seatAngle < -5) zoneLabel = `Center-Left Sweetspot (-${Math.abs(seatAngle)}°)`;
-    else if (seatAngle <= 5) zoneLabel = `0° Acoustic Sweetspot (Dead Center)`;
-    else if (seatAngle < 16) zoneLabel = `Center-Right Sweetspot (+${seatAngle}°)`;
-    else zoneLabel = `Stage Right Wing (+${seatAngle}°)`;
+    if (seatAngle <= -16) zoneLabel = `Stage left wing (${seatAngle}°)`;
+    else if (seatAngle < -5) zoneLabel = `Center-left (${seatAngle}°)`;
+    else if (seatAngle <= 5) zoneLabel = 'Dead center (0°)';
+    else if (seatAngle < 16) zoneLabel = `Center-right (+${seatAngle}°)`;
+    else zoneLabel = `Stage right wing (+${seatAngle}°)`;
   }
+
   return (
-    <div className="space-y-8">
-      {/* 3D Stage Sightline Preview (Sudut Pandang Penonton ke Panggung) */}
-      <div className="rounded-3xl bg-void-card/90 border border-void-border p-4 sm:p-6 backdrop-blur-xl shadow-lg space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-void-border">
-          <div className="flex items-center space-x-2">
-            <Eye className="w-4 h-4 text-iris animate-pulse" />
-            <span className="text-xs font-mono font-semibold text-bone uppercase tracking-wider">
-              3D STAGE SIGHTLINE POV & VIEWING ANGLE METER
-            </span>
-          </div>
-          {activeSeat ? (
-            <span className="text-xs font-mono px-3 py-1 rounded-full bg-iris/20 text-iris border border-iris/40 font-semibold self-start sm:self-auto">
-              Target: {activeSeat.tier} Row {activeSeat.row} • Seat #{activeSeat.number}
-            </span>
-          ) : (
-            <span className="text-[11px] font-mono text-silver">
-              Hover or select a seat to preview Stage POV
-            </span>
-          )}
+    <div className="space-y-6">
+      {/* Sightline POV */}
+      <div className="border border-void-border rounded-lg p-4 sm:p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <span className="label-mono text-bone flex items-center gap-2">
+            <Eye className="w-3.5 h-3.5" />
+            Stage sightline POV
+          </span>
+          <span className="label-mono text-ash">
+            {activeSeat
+              ? `${activeSeat.tier} · Row ${activeSeat.row} · Seat ${activeSeat.number}`
+              : 'Hover or select a seat'}
+          </span>
         </div>
 
-        {activeSeat ? (
+        {activeSeat && (
           <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
-            {/* Left: Perspective Mini Stage Viewport */}
-            <div className="md:col-span-5 h-40 rounded-2xl bg-zinc-950 border border-white/10 relative overflow-hidden flex flex-col justify-between p-3 perspective-1000">
-              {/* Ambient Moving Stage Lasers */}
-              <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-60">
-                <div className="absolute top-0 left-1/3 w-8 h-32 bg-gradient-to-b from-iris/60 to-transparent animate-laser-sweep-1" />
-                <div className="absolute top-0 right-1/3 w-8 h-32 bg-gradient-to-b from-emerald-400/50 to-transparent animate-laser-sweep-2" />
-              </div>
-
-              {/* Mini Stage Screen scaled by distance and rotated by sightline angle */}
-              <div className="w-full flex justify-center pt-2 relative z-10 preserve-3d">
+            {/* Mini stage viewport, scaled and rotated by the sightline */}
+            <div className="md:col-span-5 h-36 rounded-lg border border-void-border relative overflow-hidden flex flex-col justify-between p-3 bg-void-surface">
+              <div className="w-full flex justify-center pt-2">
                 <div
                   style={{
-                    transform: `scale(${Math.max(0.65, 1.4 - (seatDist / 46) * 0.75)}) rotateY(${-seatAngle * 0.7}deg)`,
+                    transform: `scale(${Math.max(
+                      0.65,
+                      1.4 - (seatDist / 46) * 0.75
+                    )}) rotateY(${-seatAngle * 0.7}deg)`,
                     transition: 'transform 0.3s cubic-bezier(0.2, 0, 0, 1)'
                   }}
-                  className="w-44 py-2 px-3 rounded-lg border border-iris bg-gradient-to-b from-iris/30 to-zinc-900 text-center shadow-iris-glow preserve-3d"
+                  className="w-40 py-2 px-3 rounded border border-iris text-center"
                 >
-                  <span className="text-[9px] font-mono text-white font-bold block">
-                    MAIN STAGE CENTER
-                  </span>
-                  <span className="text-[7px] font-mono text-emerald-400">
-                    LIVE DOLBY ATMOS
-                  </span>
+                  <span className="block label-mono text-bone">MAIN STAGE</span>
+                  <span className="block text-[9px] font-mono text-ash">LIVE</span>
                 </div>
               </div>
 
-              {/* Sightline Angle Ray connecting Viewer to Stage */}
-              <div className="relative w-full h-12 flex items-center justify-center overflow-hidden">
-                <svg className="w-full h-full" viewBox="0 0 200 60">
-                  <line
-                    x1="100"
-                    y1="5"
-                    x2={100 + (seatAngle / 28) * 75}
-                    y2="55"
-                    stroke="var(--accent-iris, #8052ff)"
-                    strokeWidth="2"
-                    strokeDasharray="4 2"
-                  />
-                  <circle cx="100" cy="5" r="3.5" fill="#10b981" />
-                  <circle
-                    cx={100 + (seatAngle / 28) * 75}
-                    cy="55"
-                    r="4"
-                    fill="#8052ff"
-                    className="animate-pulse"
-                  />
-                </svg>
-              </div>
+              <svg className="w-full h-12" viewBox="0 0 200 60" aria-hidden="true">
+                <line
+                  x1="100"
+                  y1="5"
+                  x2={100 + (seatAngle / 28) * 75}
+                  y2="55"
+                  stroke="currentColor"
+                  strokeWidth="1"
+                  strokeDasharray="4 3"
+                  className="text-iris"
+                />
+                <circle cx="100" cy="5" r="3" fill="currentColor" className="text-bone" />
+                <circle
+                  cx={100 + (seatAngle / 28) * 75}
+                  cy="55"
+                  r="3.5"
+                  fill="currentColor"
+                  className="text-iris"
+                />
+              </svg>
 
-              {/* Viewer Node Position Indicator */}
-              <div className="flex items-center justify-between text-[9px] font-mono text-silver z-10 border-t border-white/5 pt-1">
-                <span>YOUR SIGHTLINE POV</span>
-                <span className="text-iris font-semibold">{zoneLabel}</span>
+              <div className="flex items-center justify-between label-mono text-ash">
+                <span>Your POV</span>
+                <span className="text-bone">{zoneLabel}</span>
               </div>
             </div>
 
-            {/* Right: Metrics Panel (Distance & Viewing Angle Gauges) */}
-            <div className="md:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Distance Meter */}
-              <div className="p-3.5 rounded-2xl bg-void-surface border border-void-border">
-                <span className="text-[10px] font-mono text-silver uppercase block mb-1">
-                  Stage Distance
-                </span>
-                <div className="text-xl font-mono font-bold text-bone">
-                  {seatDist}m
-                </div>
-                <div className="w-full bg-zinc-800 h-1.5 rounded-full mt-2 overflow-hidden">
+            {/* Meters */}
+            <div className="md:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <span className="label-mono text-ash block mb-1">Distance</span>
+                <span className="font-mono text-xl text-bone">{seatDist}m</span>
+                <div className="w-full bg-void-elevated h-px mt-2">
                   <div
                     style={{ width: `${Math.max(15, 100 - (seatDist / 50) * 100)}%` }}
-                    className="h-full bg-iris rounded-full"
+                    className="h-px bg-iris"
                   />
                 </div>
-                <span className="text-[9px] font-mono text-silver block mt-1">
-                  {seatDist <= 14 ? 'Apex Front Row' : seatDist <= 30 ? 'Prime Soundfield' : 'Elevated Overview'}
+                <span className="block label-mono text-ash mt-2">
+                  {seatDist <= 14
+                    ? 'Front row'
+                    : seatDist <= 30
+                    ? 'Prime field'
+                    : 'Elevated'}
                 </span>
               </div>
 
-              {/* Viewing Angle Meter */}
-              <div className="p-3.5 rounded-2xl bg-void-surface border border-void-border">
-                <span className="text-[10px] font-mono text-silver uppercase block mb-1">
-                  Sightline Angle
-                </span>
-                <div className="text-xl font-mono font-bold text-bone">
+              <div>
+                <span className="label-mono text-ash block mb-1">Angle</span>
+                <span className="font-mono text-xl text-bone">
                   {seatAngle > 0 ? `+${seatAngle}°` : `${seatAngle}°`}
-                </div>
-                <div className="flex items-center justify-between text-[8px] font-mono text-ash mt-2">
-                  <span>-28° (L)</span>
-                  <span className="text-iris font-bold">0°</span>
-                  <span>+28° (R)</span>
-                </div>
-                <span className="text-[9px] font-mono text-silver block mt-1 truncate">
-                  {zoneLabel}
                 </span>
+                <div className="flex items-center justify-between label-mono text-ash mt-2">
+                  <span>-28°</span>
+                  <span className="text-bone">0°</span>
+                  <span>+28°</span>
+                </div>
+                <span className="block label-mono text-ash mt-2 truncate">{zoneLabel}</span>
               </div>
 
-              {/* Acoustic Field Assessment */}
-              <div className="p-3.5 rounded-2xl bg-void-surface border border-void-border">
-                <span className="text-[10px] font-mono text-silver uppercase block mb-1">
-                  Sightline Clarity
-                </span>
-                <div className="text-xl font-mono font-bold text-verdant">
+              <div>
+                <span className="label-mono text-ash block mb-1">Clarity</span>
+                <span className="font-mono text-xl text-bone">
                   {seatDist <= 14 ? '100%' : seatDist <= 30 ? '96%' : '90%'}
-                </div>
-                <div className="w-full bg-zinc-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                </span>
+                <div className="w-full bg-void-elevated h-px mt-2">
                   <div
                     style={{ width: `${seatDist <= 14 ? 100 : seatDist <= 30 ? 96 : 90}%` }}
-                    className="h-full bg-verdant rounded-full"
+                    className="h-px bg-bone"
                   />
                 </div>
-                <span className="text-[9px] font-mono text-silver block mt-1">
-                  Direct Unobstructed Ray
-                </span>
+                <span className="block label-mono text-ash mt-2">Unobstructed</span>
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="py-4 text-center space-y-1">
-            <p className="text-xs font-mono text-silver">
-              Click or hover any seat on the arena map below to inspect live Stage Distance, Viewing Angle Meter, and direct Sightline POV.
-            </p>
           </div>
         )}
       </div>
 
-      {/* Viewport Toolbar: View Mode, Tilt, Zoom Controls & Hint */}
-      <div className="flex flex-col gap-3 p-3.5 sm:px-6 rounded-2xl bg-void-card border border-void-border backdrop-blur-md">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          {/* 2D / 3D View Switcher */}
-          <div className="flex items-center space-x-1 bg-void-surface border border-void-border rounded-full p-1 text-xs font-mono">
+      {/* Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-void-border pb-3">
+        <div className="flex items-center gap-6">
+          <button
+            type="button"
+            onClick={() => setIs3D(true)}
+            aria-pressed={is3D}
+            className={`relative label-mono pb-1 cursor-pointer transition-colors ${
+              is3D ? 'text-bone' : 'text-ash hover:text-bone'
+            }`}
+          >
+            3D Arena
+            <span
+              className={`absolute left-0 -bottom-px h-px bg-iris transition-[width] duration-300 ${
+                is3D ? 'w-full' : 'w-0'
+              }`}
+            />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIs3D(false)}
+            aria-pressed={!is3D}
+            className={`relative label-mono pb-1 cursor-pointer transition-colors ${
+              !is3D ? 'text-bone' : 'text-ash hover:text-bone'
+            }`}
+          >
+            2D Flat
+            <span
+              className={`absolute left-0 -bottom-px h-px bg-iris transition-[width] duration-300 ${
+                !is3D ? 'w-full' : 'w-0'
+              }`}
+            />
+          </button>
+        </div>
+
+        {is3D ? (
+          <div className="flex items-center gap-3 flex-1 sm:max-w-xs">
+            <span className="label-mono text-ash whitespace-nowrap">Tilt {tilt}°</span>
+            <input
+              type="range"
+              min="18"
+              max="62"
+              step="1"
+              value={tilt}
+              onChange={(e) => setTilt(Number(e.target.value))}
+              aria-label="Camera tilt angle"
+              className="w-full h-1 appearance-none rounded-full bg-void-elevated accent-[var(--accent-iris)] cursor-pointer"
+            />
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 label-mono text-ash">
             <button
               type="button"
-              onClick={() => setIs3D(true)}
-              aria-pressed={is3D}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full transition-colors cursor-pointer ${
-                is3D ? 'bg-iris text-white shadow-iris-glow' : 'text-silver hover:text-bone'
-              }`}
+              onClick={() => setZoomLevel((z) => Math.max(z - 0.15, 0.8))}
+              aria-label="Zoom out"
+              className="p-1 hover:text-bone transition-colors cursor-pointer"
             >
-              <Box className="w-3.5 h-3.5" />
-              <span>3D Arena</span>
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <span className="font-mono tabular-nums text-bone">
+              {Math.round(zoomLevel * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={() => setZoomLevel((z) => Math.min(z + 0.15, 1.35))}
+              aria-label="Zoom in"
+              className="p-1 hover:text-bone transition-colors cursor-pointer"
+            >
+              <ZoomIn className="w-4 h-4" />
             </button>
             <button
               type="button"
-              onClick={() => setIs3D(false)}
-              aria-pressed={!is3D}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full transition-colors cursor-pointer ${
-                !is3D ? 'bg-iris text-white shadow-iris-glow' : 'text-silver hover:text-bone'
-              }`}
+              onClick={() => setZoomLevel(1)}
+              aria-label="Reset zoom"
+              className="p-1 hover:text-bone transition-colors cursor-pointer"
             >
-              <Grid2x2 className="w-3.5 h-3.5" />
-              <span>2D Flat</span>
+              <RotateCcw className="w-4 h-4" />
             </button>
           </div>
-
-          {/* Camera Tilt Angle (3D only) */}
-          {is3D && (
-            <div className="flex items-center space-x-3 flex-1 sm:max-w-xs">
-              <span className="text-[10px] font-mono text-silver uppercase whitespace-nowrap">
-                Tilt {tilt}°
-              </span>
-              <input
-                type="range"
-                min="18"
-                max="62"
-                step="1"
-                value={tilt}
-                onChange={(e) => setTilt(Number(e.target.value))}
-                aria-label="Camera tilt angle"
-                className="w-full h-1.5 rounded-full appearance-none bg-zinc-700 accent-[#8052FF] cursor-pointer"
-              />
-            </div>
-          )}
-
-          {/* Zoom Controls (2D only) */}
-          {!is3D && (
-            <div className="flex items-center space-x-2 bg-void-surface border border-void-border rounded-full p-1 text-xs font-mono">
-              <button
-                type="button"
-                onClick={handleZoomOut}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-silver hover:text-bone hover:bg-void-card transition-colors cursor-pointer"
-                title="Zoom Out"
-                aria-label="Zoom out"
-              >
-                <ZoomOut className="w-3.5 h-3.5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={handleResetZoom}
-                className="px-2 py-0.5 rounded-md text-[11px] text-bone hover:bg-void-card transition-colors cursor-pointer"
-                title="Reset Zoom"
-              >
-                {Math.round(zoomLevel * 100)}%
-              </button>
-
-              <button
-                type="button"
-                onClick={handleZoomIn}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-silver hover:text-bone hover:bg-void-card transition-colors cursor-pointer"
-                title="Zoom In"
-                aria-label="Zoom in"
-              >
-                <ZoomIn className="w-3.5 h-3.5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={handleResetZoom}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-silver hover:text-bone hover:bg-void-card transition-colors cursor-pointer"
-                title="Reset to 100%"
-                aria-label="Reset zoom level"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center space-x-2 text-xs font-mono text-silver">
-          <MoveHorizontal className="w-4 h-4 text-iris animate-pulse shrink-0" />
-          <span>Click any seat to reserve (Max 4 seats)</span>
-        </div>
+        )}
       </div>
 
       {is3D ? (
@@ -303,112 +239,77 @@ export default function SeatingGrid({
           tilt={tilt}
         />
       ) : (
-      <div className="overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-iris/40">
-        <div
-          style={{
-            transform: `scale(${zoomLevel})`,
-            transformOrigin: 'top center',
-            transition: 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)'
-          }}
-          className="space-y-8 min-w-[760px] sm:min-w-[840px] max-w-5xl mx-auto py-2"
-        >
-          {tiers.map((tierName) => {
-            const rows = seatsByTier[tierName] || {};
-            const rowKeys = Object.keys(rows).sort();
+        <div className="overflow-x-auto pb-4">
+          <div
+            style={{
+              transform: `scale(${zoomLevel})`,
+              transformOrigin: 'top center',
+              transition: 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)'
+            }}
+            className="space-y-8 min-w-[760px] sm:min-w-[840px] max-w-5xl mx-auto py-2"
+          >
+            {tiers.map((tierName) => {
+              const rows = seatsByTier[tierName] || {};
+              const rowKeys = Object.keys(rows).sort();
+              if (rowKeys.length === 0) return null;
 
-            if (rowKeys.length === 0) return null;
-
-            const tierColor =
-              tierName === 'VIP'
-                ? 'text-iris border-iris/40 bg-iris/10'
-                : tierName === 'CAT 1'
-                ? 'text-verdant border-verdant/40 bg-verdant/10'
-                : 'text-saffron border-saffron/40 bg-saffron/10';
-
-            return (
-              <div
-                key={tierName}
-                className="p-5 sm:p-7 rounded-3xl bg-void-card border border-void-border backdrop-blur-sm shadow-md"
-              >
-                {/* Tier Section Header */}
-                <div className="flex items-center justify-between mb-5 pb-3 border-b border-void-border">
-                  <div className="flex items-center space-x-3">
-                    <span className={`text-xs font-mono font-semibold px-3 py-1 rounded-full border ${tierColor}`}>
-                      {tierName} SECTION
-                    </span>
-                    <span className="text-xs text-silver font-light hidden sm:inline">
-                      {tierName === 'VIP'
-                        ? 'Front-row stage experience + Soundbooth apex'
-                        : tierName === 'CAT 1'
-                        ? 'Center arena prime acoustics'
-                        : 'Grandstand elevated wide sightline'}
+              return (
+                <div key={tierName}>
+                  <div className="flex items-center justify-between mb-3 pb-2 border-b border-void-border">
+                    <span className="label-mono text-bone">{tierName}</span>
+                    <span className="label-mono text-ash">
+                      {rowKeys.length} rows · {rowKeys.length * 20} seats
                     </span>
                   </div>
-                  <span className="text-xs font-mono text-silver">
-                    {rowKeys.length} Rows • {rowKeys.length * 20} Seats
-                  </span>
-                </div>
 
-                {/* Seat Rows Grid */}
-                <div className="space-y-2.5">
-                  {rowKeys.map((rowKey) => {
-                    const rowSeats = rows[rowKey].sort((a, b) => a.number - b.number);
-                    return (
-                      <div
-                        key={rowKey}
-                        className="grid items-center gap-1 sm:gap-1.5"
-                        style={{
-                          gridTemplateColumns:
-                            '1rem repeat(10, minmax(0, 1fr)) 2.5rem repeat(10, minmax(0, 1fr)) 1rem'
-                        }}
-                      >
-                        {/* Row Indicator Left */}
-                        <span className="text-center font-mono text-[10px] text-silver font-semibold leading-none">
-                          {rowKey}
-                        </span>
+                  <div className="space-y-2">
+                    {rowKeys.map((rowKey) => {
+                      const rowSeats = rows[rowKey].sort((a, b) => a.number - b.number);
+                      const renderSeat = (seat) => (
+                        <SeatNode
+                          key={seat._id}
+                          seat={seat}
+                          isSelected={selectedSeats.some((s) => s._id === seat._id)}
+                          onToggle={onToggleSeat}
+                          onHover={setHoveredSeat}
+                        />
+                      );
 
-                        {/* Left Aisle Group (seats 1-10) */}
-                        {rowSeats.slice(0, 10).map((seat) => (
-                          <SeatNode
-                            key={seat._id}
-                            seat={seat}
-                            isSelected={selectedSeats.some((s) => s._id === seat._id)}
-                            onToggle={onToggleSeat}
-                            onHover={setHoveredSeat}
-                          />
-                        ))}
+                      return (
+                        <div
+                          key={rowKey}
+                          className="grid items-center gap-1 sm:gap-1.5"
+                          style={{
+                            gridTemplateColumns:
+                              '1rem repeat(10, minmax(0, 1fr)) 2.5rem repeat(10, minmax(0, 1fr)) 1rem'
+                          }}
+                        >
+                          <span className="text-center font-mono text-[10px] text-ash leading-none">
+                            {rowKey}
+                          </span>
 
-                        {/* Center Walking Aisle Gap */}
-                        <div className="flex items-center justify-center">
-                          <span className="text-[8px] font-mono text-silver/70 border-b border-dashed border-void-border pb-0.5">
-                            AISLE
+                          {rowSeats.slice(0, 10).map(renderSeat)}
+
+                          <div className="flex items-center justify-center">
+                            <span className="label-mono text-tertiary" style={{ letterSpacing: 0 }}>
+                              ·
+                            </span>
+                          </div>
+
+                          {rowSeats.slice(10, 20).map(renderSeat)}
+
+                          <span className="text-center font-mono text-[10px] text-ash leading-none">
+                            {rowKey}
                           </span>
                         </div>
-
-                        {/* Right Aisle Group (seats 11-20) */}
-                        {rowSeats.slice(10, 20).map((seat) => (
-                          <SeatNode
-                            key={seat._id}
-                            seat={seat}
-                            isSelected={selectedSeats.some((s) => s._id === seat._id)}
-                            onToggle={onToggleSeat}
-                            onHover={setHoveredSeat}
-                          />
-                        ))}
-
-                        {/* Row Indicator Right */}
-                        <span className="text-center font-mono text-[10px] text-silver font-semibold leading-none">
-                          {rowKey}
-                        </span>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
       )}
     </div>
   );
