@@ -217,11 +217,11 @@ export default function Arena3DView({ seats, selectedSeats, onToggleSeat, tilt =
           textAnchor="middle"
           className="select-none pointer-events-none"
           fill="var(--text-primary)"
-          fontSize="14"
+          fontSize="10"
           fontFamily="ui-monospace, monospace"
           letterSpacing="3"
         >
-          MAIN STAGE
+          LED WALL
         </text>
 
         {/* Seat prisms */}
