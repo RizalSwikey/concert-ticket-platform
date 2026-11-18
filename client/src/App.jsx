@@ -460,7 +460,7 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
             aria-label="Reservation Summary Bar"
-            className="fixed bottom-14 md:bottom-6 left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:w-11/12 max-w-3xl z-50 bg-void-surface/95 border-2 border-iris/60 rounded-2xl sm:rounded-full p-3 sm:px-6 backdrop-blur-2xl shadow-[0_10px_40px_rgba(128,82,255,0.4)] flex flex-col sm:flex-row items-center justify-between gap-3"
+            className="fixed bottom-14 md:bottom-6 left-3 right-3 sm:mx-auto max-w-3xl z-50 bg-void-surface/95 border-2 border-iris/60 rounded-2xl sm:rounded-full p-3 sm:px-6 backdrop-blur-2xl shadow-[0_10px_40px_rgba(128,82,255,0.4)] flex flex-col sm:flex-row items-center justify-between gap-3"
           >
             <div className="flex items-center space-x-3 w-full sm:w-auto">
               <div className="w-10 h-10 rounded-full bg-iris/20 border border-iris/40 flex items-center justify-center text-iris shrink-0 shadow-sm">
@@ -478,7 +478,7 @@ export default function App() {
                         key={s._id}
                         className="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-iris text-white shadow-sm"
                       >
-                        {s.tier}-{s.seatNumber}
+                        {s.seatNumber}
                       </span>
                     ))}
                   </div>

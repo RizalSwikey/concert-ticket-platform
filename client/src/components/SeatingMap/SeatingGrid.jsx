@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import SeatNode from './SeatNode';
-import { ZoomIn, ZoomOut, RotateCcw, MoveHorizontal, Eye, Radio, Sparkles } from 'lucide-react';
+import Arena3DView from './Arena3DView';
+import { ZoomIn, ZoomOut, RotateCcw, MoveHorizontal, Eye, Box, Grid2x2 } from 'lucide-react';
 
 export default function SeatingGrid({
   seats,
@@ -9,6 +10,8 @@ export default function SeatingGrid({
 }) {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [hoveredSeat, setHoveredSeat] = useState(null);
+  const [is3D, setIs3D] = useState(true);
+  const [tilt, setTilt] = useState(38);
 
   const handleZoomIn = () => setZoomLevel((z) => Math.min(z + 0.15, 1.35));
   const handleZoomOut = () => setZoomLevel((z) => Math.max(z - 0.15, 0.8));
@@ -193,57 +196,113 @@ export default function SeatingGrid({
         )}
       </div>
 
-      {/* Viewport Toolbar: Zoom Controls & Mobile Swipe Hint */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 sm:px-6 rounded-2xl bg-void-card border border-void-border backdrop-blur-md">
-        <div className="flex items-center space-x-2 text-xs font-mono text-silver">
-          <MoveHorizontal className="w-4 h-4 text-iris animate-pulse shrink-0" />
-          <span>Crisp Amphitheater Map • Click any seat to reserve (Max 4 seats)</span>
+      {/* Viewport Toolbar: View Mode, Tilt, Zoom Controls & Hint */}
+      <div className="flex flex-col gap-3 p-3.5 sm:px-6 rounded-2xl bg-void-card border border-void-border backdrop-blur-md">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {/* 2D / 3D View Switcher */}
+          <div className="flex items-center space-x-1 bg-void-surface border border-void-border rounded-full p-1 text-xs font-mono">
+            <button
+              type="button"
+              onClick={() => setIs3D(true)}
+              aria-pressed={is3D}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full transition-colors cursor-pointer ${
+                is3D ? 'bg-iris text-white shadow-iris-glow' : 'text-silver hover:text-bone'
+              }`}
+            >
+              <Box className="w-3.5 h-3.5" />
+              <span>3D Arena</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIs3D(false)}
+              aria-pressed={!is3D}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full transition-colors cursor-pointer ${
+                !is3D ? 'bg-iris text-white shadow-iris-glow' : 'text-silver hover:text-bone'
+              }`}
+            >
+              <Grid2x2 className="w-3.5 h-3.5" />
+              <span>2D Flat</span>
+            </button>
+          </div>
+
+          {/* Camera Tilt Angle (3D only) */}
+          {is3D && (
+            <div className="flex items-center space-x-3 flex-1 sm:max-w-xs">
+              <span className="text-[10px] font-mono text-silver uppercase whitespace-nowrap">
+                Tilt {tilt}°
+              </span>
+              <input
+                type="range"
+                min="18"
+                max="62"
+                step="1"
+                value={tilt}
+                onChange={(e) => setTilt(Number(e.target.value))}
+                aria-label="Camera tilt angle"
+                className="w-full h-1.5 rounded-full appearance-none bg-zinc-700 accent-[#8052FF] cursor-pointer"
+              />
+            </div>
+          )}
+
+          {/* Zoom Controls (2D only) */}
+          {!is3D && (
+            <div className="flex items-center space-x-2 bg-void-surface border border-void-border rounded-full p-1 text-xs font-mono">
+              <button
+                type="button"
+                onClick={handleZoomOut}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-silver hover:text-bone hover:bg-void-card transition-colors cursor-pointer"
+                title="Zoom Out"
+                aria-label="Zoom out"
+              >
+                <ZoomOut className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResetZoom}
+                className="px-2 py-0.5 rounded-md text-[11px] text-bone hover:bg-void-card transition-colors cursor-pointer"
+                title="Reset Zoom"
+              >
+                {Math.round(zoomLevel * 100)}%
+              </button>
+
+              <button
+                type="button"
+                onClick={handleZoomIn}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-silver hover:text-bone hover:bg-void-card transition-colors cursor-pointer"
+                title="Zoom In"
+                aria-label="Zoom in"
+              >
+                <ZoomIn className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResetZoom}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-silver hover:text-bone hover:bg-void-card transition-colors cursor-pointer"
+                title="Reset to 100%"
+                aria-label="Reset zoom level"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Zoom Controls */}
-        <div className="flex items-center space-x-2 bg-void-surface border border-void-border rounded-full p-1 text-xs font-mono">
-          <button
-            type="button"
-            onClick={handleZoomOut}
-            className="w-7 h-7 rounded-full flex items-center justify-center text-silver hover:text-bone hover:bg-void-card transition-colors cursor-pointer"
-            title="Zoom Out"
-            aria-label="Zoom out"
-          >
-            <ZoomOut className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={handleResetZoom}
-            className="px-2 py-0.5 rounded-md text-[11px] text-bone hover:bg-void-card transition-colors cursor-pointer"
-            title="Reset Zoom"
-          >
-            {Math.round(zoomLevel * 100)}%
-          </button>
-
-          <button
-            type="button"
-            onClick={handleZoomIn}
-            className="w-7 h-7 rounded-full flex items-center justify-center text-silver hover:text-bone hover:bg-void-card transition-colors cursor-pointer"
-            title="Zoom In"
-            aria-label="Zoom in"
-          >
-            <ZoomIn className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={handleResetZoom}
-            className="w-7 h-7 rounded-full flex items-center justify-center text-silver hover:text-bone hover:bg-void-card transition-colors cursor-pointer"
-            title="Reset to 100%"
-            aria-label="Reset zoom level"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
+        <div className="flex items-center space-x-2 text-xs font-mono text-silver">
+          <MoveHorizontal className="w-4 h-4 text-iris animate-pulse shrink-0" />
+          <span>Click any seat to reserve (Max 4 seats)</span>
         </div>
       </div>
 
-      {/* Unified Amphitheater Canvas (Single crisp container, zero rotateX, zero nested vertical scrollbars) */}
+      {is3D ? (
+        <Arena3DView
+          seats={seats}
+          selectedSeats={selectedSeats}
+          onToggleSeat={onToggleSeat}
+          tilt={tilt}
+        />
+      ) : (
       <div className="overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-iris/40">
         <div
           style={{
@@ -291,52 +350,54 @@ export default function SeatingGrid({
                 </div>
 
                 {/* Seat Rows Grid */}
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {rowKeys.map((rowKey) => {
                     const rowSeats = rows[rowKey].sort((a, b) => a.number - b.number);
                     return (
                       <div
                         key={rowKey}
-                        className="flex items-center justify-center space-x-2 sm:space-x-3"
+                        className="grid items-center gap-1 sm:gap-1.5"
+                        style={{
+                          gridTemplateColumns:
+                            '1rem repeat(10, minmax(0, 1fr)) 2.5rem repeat(10, minmax(0, 1fr)) 1rem'
+                        }}
                       >
                         {/* Row Indicator Left */}
-                        <span className="w-7 text-center font-mono text-xs text-silver font-semibold">
+                        <span className="text-center font-mono text-[10px] text-silver font-semibold leading-none">
                           {rowKey}
                         </span>
 
                         {/* Left Aisle Group (seats 1-10) */}
-                        <div className="flex items-center space-x-1.5 sm:space-x-2">
-                          {rowSeats.slice(0, 10).map((seat) => (
-                            <SeatNode
-                              key={seat._id}
-                              seat={seat}
-                              isSelected={selectedSeats.some((s) => s._id === seat._id)}
-                              onToggle={onToggleSeat}
-                              onHover={setHoveredSeat}
-                            />
-                          ))}
-                        </div>
+                        {rowSeats.slice(0, 10).map((seat) => (
+                          <SeatNode
+                            key={seat._id}
+                            seat={seat}
+                            isSelected={selectedSeats.some((s) => s._id === seat._id)}
+                            onToggle={onToggleSeat}
+                            onHover={setHoveredSeat}
+                          />
+                        ))}
 
                         {/* Center Walking Aisle Gap */}
-                        <div className="w-8 sm:w-12 h-8 border-b border-dashed border-void-border flex items-center justify-center">
-                          <span className="text-[9px] font-mono text-silver">AISLE</span>
+                        <div className="flex items-center justify-center">
+                          <span className="text-[8px] font-mono text-silver/70 border-b border-dashed border-void-border pb-0.5">
+                            AISLE
+                          </span>
                         </div>
 
                         {/* Right Aisle Group (seats 11-20) */}
-                        <div className="flex items-center space-x-1.5 sm:space-x-2">
-                          {rowSeats.slice(10, 20).map((seat) => (
-                            <SeatNode
-                              key={seat._id}
-                              seat={seat}
-                              isSelected={selectedSeats.some((s) => s._id === seat._id)}
-                              onToggle={onToggleSeat}
-                              onHover={setHoveredSeat}
-                            />
-                          ))}
-                        </div>
+                        {rowSeats.slice(10, 20).map((seat) => (
+                          <SeatNode
+                            key={seat._id}
+                            seat={seat}
+                            isSelected={selectedSeats.some((s) => s._id === seat._id)}
+                            onToggle={onToggleSeat}
+                            onHover={setHoveredSeat}
+                          />
+                        ))}
 
                         {/* Row Indicator Right */}
-                        <span className="w-7 text-center font-mono text-xs text-silver font-semibold">
+                        <span className="text-center font-mono text-[10px] text-silver font-semibold leading-none">
                           {rowKey}
                         </span>
                       </div>
@@ -348,6 +409,7 @@ export default function SeatingGrid({
           })}
         </div>
       </div>
+      )}
     </div>
   );
 }

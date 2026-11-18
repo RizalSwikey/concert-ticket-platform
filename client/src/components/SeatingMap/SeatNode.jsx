@@ -56,7 +56,7 @@ export default function SeatNode({
   };
   return (
     <div
-      className="relative flex items-center justify-center"
+      className="relative flex items-center justify-center w-full"
       onMouseEnter={() => {
         setShowTooltip(true);
         onHover?.(seat);
@@ -70,7 +70,7 @@ export default function SeatNode({
         whileHover={!isBooked && (!isLocked || isLockedByMe) ? { scale: 1.12 } : {}}
         whileTap={!isBooked && (!isLocked || isLockedByMe) ? { scale: 0.92 } : {}}
         transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-        className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center text-xs font-mono font-semibold transition-colors relative select-none shrink-0 ${stateClasses}`}
+        className={`w-full aspect-square rounded-lg flex items-center justify-center text-[10px] sm:text-xs font-mono font-semibold transition-colors relative select-none ${stateClasses}`}
         aria-label={`Seat ${seat.seatNumber}`}
       >
         {/* Breathing pulse ring for locked seats */}
